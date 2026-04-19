@@ -1,0 +1,36 @@
+{
+  "quests": [
+    {
+      "id": "missing_caravan",
+      "name": "The Missing Caravan",
+      "giver": "tomas_reeve",
+      "status": "not_started",
+      "description": "A supply caravan vanished on the road near Emberwood Ruins.",
+      "objectives": [
+        {
+          "id": "speak_to_tomas",
+          "description": "Speak with Tomas Reeve about the missing caravan.",
+          "completed": false
+        },
+        {
+          "id": "investigate_road",
+          "description": "Investigate the road leading toward Emberwood Ruins.",
+          "completed": false
+        },
+        {
+          "id": "find_caravan",
+          "description": "Locate the missing caravan or determine what happened to it.",
+          "completed": false
+        }
+      ],
+      "rewards": {
+        "gold": 50,
+        "item": "Council Signet"
+      },
+      "failure_conditions": [
+        "player_abandons_quest",
+        "critical_story_npc_dies"
+      ]
+    }
+  ]
+}

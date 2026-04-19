@@ -1,0 +1,8 @@
+jupyterlab
+ipykernel
+langgraph
+langchain
+pydantic
+python-dotenv
+pytest
+openai

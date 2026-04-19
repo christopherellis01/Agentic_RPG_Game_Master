@@ -87,3 +87,93 @@ agentic-game-rpg-master/
 │       ├── quest_agent.py
 │       └── rules_agent.py
 └── tests/
+
+---
+
+## Tech stack
+
+- **Python**
+- **Jupyter Notebook / VS Code**
+- **LangGraph** for graph-based orchestration
+- **Pydantic** for structured models and validation
+- **JSON** for world data, NPCs, quests, and rules
+- **Pytest** for testing routing and state logic
+
+---
+
+## Setup
+
+Clone the repository and move into the project folder:
+
+```
+git clone christopherellis01/Agentic_RPG_Game_Master
+cd agentic-game-rpg-master
+```
+
+Create and activate a virtual environment:
+
+```
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+Install dependencies:
+
+```
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
+
+Register the Jupyter kernel:
+
+```
+python -m ipykernel install --user --name=agentic_rpg_venv --display-name "Python (agentic_rpg_venv)"
+```
+
+## Running the Project
+
+For early development, the easiest entry point will likely be the notebook prototype:
+
+```
+jupyter lab
+```
+
+Then open:
+
+```
+notebooks/prototype_game_loop.ipynb
+```
+
+As the project matures, the main orchestration flow can also be run through Python modules in `src/`.
+
+---
+
+## Current status
+
+This project is currently in the architecture and setup phase. The initial focus is on:
+
+* defining structured game content
+* implementing canonical and transient state models
+* building the router and orchestrator skeleton
+* stubbing specialist components
+* testing one full turn from input to narration
+
+---
+
+## Team
+
+Christopher Ellis
+Mazin Bashir
+Agnes Sithole
+
+---
+
+## Future Improvements
+
+* richer NPC memory and relationship tracking
+* more advanced branching quests
+* better combat balancing
+* expanded world data
+* improved debugging and turn tracing
+* optional UI or web front end
+

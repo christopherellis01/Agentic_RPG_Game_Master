@@ -1,0 +1,27 @@
+{
+  "world_name": "The Shattered Vale",
+  "tone": "mysterious, adventurous, lightly dangerous",
+  "starting_location": "Oakshade Village",
+  "locations": [
+    {
+      "id": "oakshade_village",
+      "name": "Oakshade Village",
+      "description": "A small forest-edge village with a busy inn, a blacksmith, and anxious townsfolk."
+    },
+    {
+      "id": "emberwood_ruins",
+      "name": "Emberwood Ruins",
+      "description": "Old stone ruins deep in the woods, rumored to hold relics and restless spirits."
+    }
+  ],
+  "factions": [
+    {
+      "name": "Village Council",
+      "description": "Local leaders trying to keep Oakshade safe."
+    },
+    {
+      "name": "Ashen Band",
+      "description": "A loose group of raiders and scavengers operating near the ruins."
+    }
+  ]
+}

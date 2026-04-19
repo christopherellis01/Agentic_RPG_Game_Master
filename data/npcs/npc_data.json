@@ -1,0 +1,30 @@
+{
+  "npcs": [
+    {
+      "id": "marla_innkeeper",
+      "name": "Marla Thorn",
+      "role": "Innkeeper",
+      "location": "oakshade_village",
+      "personality": ["warm", "observant", "cautious"],
+      "goals": ["protect the village", "keep travelers safe"],
+      "secrets": ["has seen strange lights near the ruins"],
+      "relationships": {
+        "tomas_reeve": "trusts",
+        "player": "neutral"
+      }
+    },
+    {
+      "id": "tomas_reeve",
+      "name": "Tomas Reeve",
+      "role": "Village Reeve",
+      "location": "oakshade_village",
+      "personality": ["serious", "dutiful", "worried"],
+      "goals": ["solve the recent disappearances", "avoid panic"],
+      "secrets": ["suspects the ruins are connected to the missing villagers"],
+      "relationships": {
+        "marla_innkeeper": "trusts",
+        "player": "neutral"
+      }
+    }
+  ]
+}

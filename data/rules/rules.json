@@ -1,0 +1,26 @@
+{
+  "skill_checks": {
+    "roll": "1d20",
+    "difficulty_levels": {
+      "easy": 8,
+      "medium": 12,
+      "hard": 16
+    },
+    "outcomes": ["success", "partial_success", "failure"]
+  },
+  "combat": {
+    "initiative": "simple_turn_order",
+    "attack_roll": "1d20",
+    "base_player_hp": 20,
+    "base_enemy_hp": 10,
+    "damage_range": {
+      "min": 2,
+      "max": 6
+    }
+  },
+  "general_rules": [
+    "The critic must validate all proposed state changes before they are committed.",
+    "Only the State Updater can modify canonical game state.",
+    "Narrative flavor should not contradict structured state."
+  ]
+}

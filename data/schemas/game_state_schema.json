@@ -1,0 +1,26 @@
+{
+  "canonical_game_state": {
+    "current_scene": "string",
+    "location": "string",
+    "active_quests": "array",
+    "npc_states": "object",
+    "inventory": "array",
+    "party_status": "object",
+    "recent_events": "array"
+  },
+  "transient_turn_state": {
+    "player_action": "string",
+    "selected_route": "string",
+    "specialist_outputs": "object",
+    "proposed_updates": "object",
+    "validation_status": "string",
+    "current_turn_events": "array",
+    "final_response": "string"
+  },
+  "session_execution_metadata": {
+    "turn_id": "integer",
+    "session_id": "string",
+    "timestamp": "string",
+    "retry_count": "integer"
+  }
+}
