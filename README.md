@@ -7,7 +7,7 @@ The goal of the project is to create a game experience that feels like a living 
 
 ---
 
-*** This repository currently contains project scaffolding and architecture documents; the first executable prototype is under active development. ***
+>This repository currently contains project scaffolding and architecture documents; the first executable prototype is under active development.
 
 ---
 
@@ -64,7 +64,7 @@ For the full system design, see [docs/architecture.md](docs/architecture.md).
 
 ## Repository structure
 
-```text id="k6k1oy"
+```text
 Agentic_RPG_Game_Master/
 ├── README.md
 ├── requirements.txt
@@ -91,6 +91,7 @@ Agentic_RPG_Game_Master/
 │       ├── quest_agent.py
 │       └── rules_agent.py
 └── tests/
+```
 
 ---
 
@@ -156,28 +157,28 @@ As the project matures, the main orchestration flow can also be run through Pyth
 
 This project is currently in the architecture and setup phase. The initial focus is on:
 
-* defining structured game content
-* implementing canonical and transient state models
-* building the router and orchestrator skeleton
-* stubbing specialist components
-* testing one full turn from input to narration
+- defining structured game content
+- implementing canonical and transient state models
+- building the router and orchestrator skeleton
+- stubbing specialist components
+- testing one full turn from input to narration
 
 ---
 
 ## Team
 
-Christopher Ellis
-Mazin Bashir
-Agnes Sithole
+Mazin Bashir  
+Christopher Ellis  
+Agnes Sithole  
 
 ---
 
 ## Future Improvements
 
-* richer NPC memory and relationship tracking
-* more advanced branching quests
-* better combat balancing
-* expanded world data
-* improved debugging and turn tracing
-* optional UI or web front end
+- richer NPC memory and relationship tracking
+- more advanced branching quests
+- better combat balancing
+- expanded world data
+- improved debugging and turn tracing
+- optional UI or web front end
 
