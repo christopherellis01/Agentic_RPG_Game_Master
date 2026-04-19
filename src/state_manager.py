@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict
 
@@ -17,7 +17,6 @@ from src.models.state_models import (
     TransientTurnState,
 )
 
-
 # PROJECT PATHS
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -26,14 +25,21 @@ WORLD_PATH = PROJECT_ROOT / "data" / "world" / "world_state.json"
 NPC_PATH = PROJECT_ROOT / "data" / "npcs" / "npc_data.json"
 QUEST_PATH = PROJECT_ROOT / "data" / "quests" / "quest_data.json"
 
-
 # JSON HELPERS
 
 def load_json(path: Path) -> Dict[str, Any]:
     """Load a JSON file and return it as a dictionary."""
-    with path.open("r", encoding="utf-8") as f:
-        return json.load(f)
+    if not path.exists():
+        raise FileNotFoundError(f"Required data file not found: {path}")
 
+    if not path.is_file():
+        raise ValueError(f"Expected a file but got: {path}")
+
+    try:
+        with path.open("r", encoding="utf-8") as f:
+            return json.load(f)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Invalid JSON in {path}: {e}") from e
 
 # BUILDERS
 
@@ -141,11 +147,20 @@ def build_session_metadata(
     return SessionExecutionMetadata(
         session_id=session_id,
         turn_id=turn_id,
-        timestamp=datetime.utcnow().isoformat(),
+        timestamp=datetime.now(timezone.utc).isoformat(),
         retry_count=retry_count,
         max_retries=max_retries,
     )
 
+
+def start_new_turn(state: GameState, player_action: str) -> GameState:
+    """Reset transient turn state and advance metadata for a new turn."""
+    state.meta.turn_id += 1
+    state.meta.retry_count = 0
+    state.meta.timestamp = datetime.now(timezone.utc).isoformat()
+    state.turn = build_initial_turn_state(player_action=player_action)
+
+    return state
 
 # PUBLIC FUNCTION
 
@@ -168,14 +183,26 @@ def build_initial_state(
         meta=meta,
     )
 
-
-# SAVE STATE FUNCTION
+# SAVE / LOAD STATE FUNCTIONS
 
 def save_state(state: GameState, path: Path | str) -> None:
     """Save the current GameState to disk as JSON."""
     output_path = Path(path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(state.model_dump_json(indent=2), encoding="utf-8")
 
-    with output_path.open("w", encoding="utf-8") as f:
-        json.dump(state.model_dump(), f, indent=2)
 
+def load_state(path: Path | str) -> GameState:
+    """Load a saved GameState from disk."""
+    input_path = Path(path)
+
+    if not input_path.exists():
+        raise FileNotFoundError(f"Saved state file not found: {input_path}")
+
+    if not input_path.is_file():
+        raise ValueError(f"Expected a file but got: {input_path}")
+
+    try:
+        return GameState.model_validate_json(input_path.read_text(encoding="utf-8"))
+    except Exception as e:
+        raise ValueError(f"Failed to load GameState from {input_path}: {e}") from e
