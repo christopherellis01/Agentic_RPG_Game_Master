@@ -3,6 +3,7 @@ ipykernel
 langgraph
 langchain
 pydantic
+pydantic-ai
 python-dotenv
 pytest
 openai
