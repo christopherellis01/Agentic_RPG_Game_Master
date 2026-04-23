@@ -1,35 +1,52 @@
 {
   "quests": [
     {
-      "id": "missing_caravan",
-      "name": "The Missing Caravan",
-      "giver": "tomas_reeve",
+      "id": "missing_scout",
+      "name": "The Missing Scout",
       "status": "not_started",
-      "description": "A supply caravan vanished on the road near Emberwood Ruins.",
+      "giver": "mara_innkeeper",
+      "location_id": "oakshade_village",
+      "summary": "The Village Council sent a scout toward the Emberwood Ruins to investigate reports of Ashen Band activity. The scout has not returned. Mara, the innkeeper, is quietly asking travelers if anyone would be willing to look into it.",
+      "short_summary": "Find out what happened to the Council's missing scout near the Emberwood Ruins.",
       "objectives": [
         {
-          "id": "speak_to_tomas",
-          "description": "Speak with Tomas Reeve about the missing caravan.",
+          "id": "speak_to_mara",
+          "description": "Speak with Mara at the inn and agree to help look into the missing scout.",
           "completed": false
         },
         {
-          "id": "investigate_road",
-          "description": "Investigate the road leading toward Emberwood Ruins.",
+          "id": "gather_information",
+          "description": "Gather information about the Ashen Band or the scout's route from villagers or travelers.",
           "completed": false
         },
         {
-          "id": "find_caravan",
-          "description": "Locate the missing caravan or determine what happened to it.",
+          "id": "search_emberwood_ruins",
+          "description": "Travel to the Emberwood Ruins and search for evidence of the scout's fate.",
           "completed": false
         }
       ],
-      "rewards": {
-        "gold": 50,
-        "item": "Council Signet"
-      },
-      "failure_conditions": [
-        "player_abandons_quest",
-        "critical_story_npc_dies"
+      "branches": [
+        {
+          "branch_id": "work_with_council",
+          "description": "Report findings back to Mara and the Village Council. Gains village trust and backup, but loses the chance to keep any ruin-relics.",
+          "status": "available"
+        },
+        {
+          "branch_id": "work_with_corvin",
+          "description": "Accept Corvin's offer and investigate quietly on his terms. Gains the map fragment and potential payment, but risks the Council seeing you as aligned with outsiders.",
+          "status": "available"
+        },
+        {
+          "branch_id": "confront_ashen_band",
+          "description": "Directly confront the Ashen Band about the scout. High risk, high reward.",
+          "status": "locked",
+          "unlock_condition": "Learn the Ashen Band's location from Corvin, Harlan, or evidence at the ruins."
+        }
+      ],
+      "proposed_rewards": [
+        "Payment from the Village Council if the Council branch is taken",
+        "Partial map of the Emberwood Ruins if the Corvin branch is taken",
+        "Increased standing with either the Village Council or Corvin depending on branch"
       ]
     }
   ]

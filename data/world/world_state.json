@@ -2,16 +2,61 @@
   "world_name": "The Shattered Vale",
   "tone": "mysterious, adventurous, lightly dangerous",
   "starting_location": "Oakshade Village",
+  "world_summary": "The Shattered Vale is a patchwork of forest-edge villages and ruined holdfasts left behind by a fallen kingdom. Travel between settlements is slow and uncertain, and the Vale's old stone ruins hum with restless things that the living do not fully understand. Oakshade sits at the southern edge of the wood, the last ordered place before the trees grow wild.",
   "locations": [
     {
       "id": "oakshade_village",
       "name": "Oakshade Village",
-      "description": "A small forest-edge village with a busy inn, a blacksmith, and anxious townsfolk."
+      "description": "A small forest-edge village with a busy inn, a blacksmith, and anxious townsfolk.",
+      "environmental_details": [
+        "The inn's common room is warm and loud, with travelers crowded close to the hearth.",
+        "A blacksmith's hammer rings from a forge near the village gate.",
+        "Villagers glance at strangers longer than feels comfortable.",
+        "A hand-painted sign at the gate warns travelers to be clear of the woods by nightfall."
+      ],
+      "notable_features": [
+        "The inn, which doubles as the village's informal meeting hall.",
+        "A small shrine at the center of the square, recently tended.",
+        "A bulletin board near the blacksmith with notices of missing travelers and posted bounties."
+      ],
+      "relevant_facts": [
+        "Several villagers have gone missing near the Emberwood Ruins in the past season.",
+        "The Village Council governs Oakshade and is openly worried about the Ashen Band.",
+        "Outsiders are tolerated but watched; the innkeeper is the first person most strangers speak to.",
+        "The woods between Oakshade and the ruins are considered safe by day and dangerous by night."
+      ],
+      "active_rumors": [
+        "A scout from the Village Council has not returned from a trip toward the ruins.",
+        "Ashen Band raiders have been seen carrying items that do not look like normal loot.",
+        "Lights have been seen moving through the ruins after dark, though no fires are ever found."
+      ]
     },
     {
       "id": "emberwood_ruins",
       "name": "Emberwood Ruins",
-      "description": "Old stone ruins deep in the woods, rumored to hold relics and restless spirits."
+      "description": "Old stone ruins deep in the woods, rumored to hold relics and restless spirits.",
+      "environmental_details": [
+        "Cracked stone walls rise out of moss and tangled roots.",
+        "Carvings on the old stones are worn but still faintly legible.",
+        "The air is colder here than in the surrounding woods.",
+        "Faint tracks, both human and not, cross each other near the outer walls."
+      ],
+      "notable_features": [
+        "A collapsed central hall with a stairway leading down into the dark.",
+        "A ring of standing stones just outside the ruin's main walls.",
+        "Recently disturbed ground that suggests someone has been digging."
+      ],
+      "relevant_facts": [
+        "The ruins predate Oakshade and the fallen kingdom that once ruled the Vale.",
+        "Relics taken from the ruins are considered bad luck by most villagers.",
+        "The Ashen Band is believed to camp nearby and use the ruins as a staging ground.",
+        "Restless spirits are most active after dusk."
+      ],
+      "active_rumors": [
+        "Something old has been waking up beneath the ruins.",
+        "A member of the Ashen Band was found dead near the standing stones, untouched by weapons.",
+        "The Village Council is considering hiring outside help to investigate the ruins quietly."
+      ]
     }
   ],
   "factions": [

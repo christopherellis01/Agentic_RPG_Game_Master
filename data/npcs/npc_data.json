@@ -1,30 +1,79 @@
 {
   "npcs": [
     {
-      "id": "marla_innkeeper",
-      "name": "Marla Thorn",
-      "role": "Innkeeper",
+      "id": "mara_innkeeper",
+      "name": "Mara",
       "location": "oakshade_village",
-      "personality": ["warm", "observant", "cautious"],
-      "goals": ["protect the village", "keep travelers safe"],
-      "secrets": ["has seen strange lights near the ruins"],
-      "relationships": {
-        "tomas_reeve": "trusts",
-        "player": "neutral"
-      }
+      "role": "Innkeeper of the Oakshade inn and informal voice of the Village Council",
+      "personality": [
+        "observant",
+        "practical",
+        "protective of regulars",
+        "slow to trust strangers"
+      ],
+      "goals": [
+        "Keep Oakshade's travelers safe and paying",
+        "Find out what is happening near the Emberwood Ruins",
+        "Avoid open conflict with the Ashen Band while the Council figures out what to do"
+      ],
+      "disposition": "wary but fair",
+      "knowledge": [
+        "Knows most villagers by name and tracks who is missing and who is back.",
+        "Heard that a Council scout has not returned from a trip toward the ruins.",
+        "Does not trust the hooded traveler Corvin and has noticed he watches newcomers.",
+        "Knows the blacksmith, Harlan, has been buying strange metal from travelers."
+      ],
+      "relationship_summary": "Has never met the player before. Treats outsiders politely but guardedly until they prove themselves."
     },
     {
-      "id": "tomas_reeve",
-      "name": "Tomas Reeve",
-      "role": "Village Reeve",
+      "id": "corvin_stranger",
+      "name": "Corvin",
       "location": "oakshade_village",
-      "personality": ["serious", "dutiful", "worried"],
-      "goals": ["solve the recent disappearances", "avoid panic"],
-      "secrets": ["suspects the ruins are connected to the missing villagers"],
-      "relationships": {
-        "marla_innkeeper": "trusts",
-        "player": "neutral"
-      }
+      "role": "Hooded traveler at the inn; possible scout or informant with his own agenda",
+      "personality": [
+        "quiet",
+        "guarded",
+        "quick to size people up",
+        "willing to pay for discreet help"
+      ],
+      "goals": [
+        "Find out what the Ashen Band is pulling out of the Emberwood Ruins",
+        "Avoid being identified by the Village Council",
+        "Recruit an outsider to do the dangerous part of his investigation"
+      ],
+      "disposition": "neutral, attentive, hopeful when approached quietly",
+      "knowledge": [
+        "Claims to have followed the Ashen Band for weeks before coming to Oakshade.",
+        "Has a partial map of the Emberwood Ruins he is willing to share for a price.",
+        "Will not speak openly in Mara's presence and prefers conversations away from the bar.",
+        "Knows the Council has lost at least one scout but has not told anyone in the village."
+      ],
+      "relationship_summary": "Has been watching the player since they walked in. Will approach if the player seems capable and discreet."
+    },
+    {
+      "id": "harlan_smith",
+      "name": "Harlan",
+      "location": "oakshade_village",
+      "role": "Village blacksmith and reluctant middleman for outside traders",
+      "personality": [
+        "blunt",
+        "anxious",
+        "loyal to the village but short on money",
+        "slow to lie but quick to change the subject"
+      ],
+      "goals": [
+        "Keep his forge running through a bad season",
+        "Avoid being blamed for buying metal that might have come from the ruins",
+        "Protect his family from anything that looks like Ashen Band trouble"
+      ],
+      "disposition": "nervous but approachable",
+      "knowledge": [
+        "Has been buying unusual metal from passing travelers at a suspicious discount.",
+        "Suspects but will not admit that some of it came from the Emberwood Ruins.",
+        "Knows the Ashen Band has used at least one of his buyers as a courier.",
+        "Will sell basic gear to the player and trade information if pressed gently."
+      ],
+      "relationship_summary": "Treats the player as a potential customer first. Will open up only if the player does not threaten his livelihood."
     }
   ]
 }
