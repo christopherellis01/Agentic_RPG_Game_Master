@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import random
 from typing import List, Optional
 
 from pydantic import BaseModel, Field
@@ -32,6 +33,158 @@ class RulesAgentOutput(BaseModel):
     suggested_next_step: Optional[str] = None
 
 
+def resolve_action_deterministic(agent_input: RulesAgentInput) -> Optional[RulesAgentOutput]:
+    """
+    Deterministic rules helper adapted from the standalone rules_agent_module.
+
+    This handles simple, recognizable player actions without requiring an LLM call.
+    It suggests state changes but does not directly modify game state.
+    """
+    action = agent_input.player_action.lower().strip()
+
+    if not action:
+        return RulesAgentOutput(
+            resolution_type="unknown",
+            outcome="failure",
+            mechanical_summary="No player action was provided.",
+            suggested_next_step="Ask the player what they want to do next.",
+        )
+
+    # Simple combat resolution
+    if any(keyword in action for keyword in ["attack", "strike", "slash", "shoot", "stab"]):
+        enemy_hp = agent_input.enemy_hp if agent_input.enemy_hp is not None else 20
+        roll = random.randint(1, 10)
+
+        if roll >= 8:
+            damage = 10
+            outcome = "success"
+            summary = f"The attack succeeds cleanly. Roll = {roll}."
+        elif roll >= 5:
+            damage = 5
+            outcome = "partial_success"
+            summary = f"The attack partially succeeds. Roll = {roll}."
+        else:
+            damage = 0
+            outcome = "failure"
+            summary = f"The attack misses or fails to land effectively. Roll = {roll}."
+
+        new_enemy_hp = max(enemy_hp - damage, 0)
+
+        if agent_input.enemy_name:
+            proposed_changes = [
+                f"{agent_input.enemy_name} HP changes from {enemy_hp} to {new_enemy_hp}."
+            ]
+        else:
+            proposed_changes = [
+                f"Enemy HP changes from {enemy_hp} to {new_enemy_hp}."
+            ]
+
+        return RulesAgentOutput(
+            resolution_type="combat",
+            outcome=outcome,
+            mechanical_summary=summary,
+            damage_dealt=damage,
+            damage_taken=0,
+            proposed_state_changes=proposed_changes,
+            suggested_next_step="Send this result to the critic/state updater before narration.",
+        )
+
+    # Simple dialogue/social resolution
+    if any(keyword in action for keyword in ["persuade", "convince", "negotiate", "ask", "talk"]):
+        return RulesAgentOutput(
+            resolution_type="skill_check",
+            outcome="partial_success",
+            mechanical_summary=(
+                "The social action has a mixed result. The NPC is willing to listen, "
+                "but is not fully convinced yet."
+            ),
+            proposed_state_changes=[
+                "NPC attitude shifts slightly toward cautious cooperation."
+            ],
+            suggested_next_step="The narrator should describe the NPC's guarded response.",
+        )
+
+    # Simple exploration/search resolution
+    if any(keyword in action for keyword in ["search", "inspect", "investigate", "look", "examine"]):
+        return RulesAgentOutput(
+            resolution_type="skill_check",
+            outcome="success",
+            mechanical_summary=(
+                "The exploration action succeeds. The player notices a useful detail "
+                "or discovers something relevant in the scene."
+            ),
+            proposed_state_changes=[
+                "Add a discovered clue or useful environmental detail to the scene state."
+            ],
+            suggested_next_step="The narrator should reveal the discovery in story form.",
+        )
+
+    # Let the LLM handle anything more complicated.
+    return None
+
+
+def resolve_action(player_action: str, state: dict) -> dict:
+    """
+    Compatibility wrapper for the standalone rules_agent_module tests.
+
+    Converts the older rules_agent_module interface into the main project's
+    RulesAgentInput / RulesAgentOutput structure.
+    """
+    agent_input = RulesAgentInput(
+        player_action=player_action,
+        current_scene=state.get("current_scene", "No scene provided."),
+        character_hp=state.get("character_hp", 20),
+        character_max_hp=state.get("character_max_hp", 20),
+        relevant_stats=state.get("relevant_stats", []),
+        inventory=state.get("inventory", []),
+        rules_summary=state.get(
+            "rules_summary",
+            "Use simple d10-style resolution for combat, dialogue, and exploration.",
+        ),
+        difficulty=state.get("difficulty", "medium"),
+        enemy_name=state.get("enemy_name"),
+        enemy_hp=state.get("enemy_hp"),
+    )
+
+    result = resolve_action_deterministic(agent_input)
+
+    if result is None:
+        return {
+            "action_type": "unknown",
+            "outcome": "failure",
+            "reason": "Action not recognized by the deterministic rules system.",
+            "consequence": {},
+        }
+
+    action = player_action.lower().strip()
+    consequence = {
+        "damage_dealt": result.damage_dealt,
+        "damage_taken": result.damage_taken,
+        "status_effects": result.status_effects,
+        "proposed_state_changes": result.proposed_state_changes,
+    }
+
+    # Match the older standalone module's expected action names.
+    if any(keyword in action for keyword in ["persuade", "convince", "negotiate", "ask", "talk"]):
+        action_type = "dialogue"
+    elif any(keyword in action for keyword in ["search", "inspect", "investigate", "look", "examine"]):
+        action_type = "exploration"
+    else:
+        action_type = result.resolution_type
+
+    # Match the older standalone module's expected combat consequence.
+    if action_type == "combat":
+        enemy_hp = state.get("enemy_hp", 20)
+        consequence["new_enemy_hp"] = max(enemy_hp - result.damage_dealt, 0)
+
+    return {
+        "action_type": action_type,
+        "outcome": result.outcome,
+        "reason": result.mechanical_summary,
+        "consequence": consequence,
+    }
+
+
 rules_agent = Agent(
     model=get_model("claude-sonnet-4-6"),
     output_type=RulesAgentOutput,
@@ -46,6 +199,11 @@ rules_agent = Agent(
 
 
 async def run_rules_agent(agent_input: RulesAgentInput) -> RulesAgentOutput:
+    deterministic_result = resolve_action_deterministic(agent_input)
+
+    if deterministic_result is not None:
+        return deterministic_result
+
     prompt = f"""
 Player action:
 {agent_input.player_action}
