@@ -7,7 +7,7 @@ The goal of the project is to create a game experience that feels like a living 
 
 ---
 
->This repository currently contains project scaffolding and architecture documents; the first executable prototype is under active development.
+> This repository now contains a working prototype structure with routing, orchestration, state management, specialist agents, deterministic rules resolution, notebook-based demos, and pytest coverage. Development is still ongoing, but the core project pieces are now implemented and testable..
 
 ---
 
@@ -92,17 +92,17 @@ Agentic_RPG_Game_Master/
 │       └── rules_agent.py
 └── tests/
 ```
-
 ---
 
 ## Tech stack
 
 - **Python**
 - **Jupyter Notebook / VS Code**
-- **LangGraph** for graph-based orchestration
 - **Pydantic** for structured models and validation
-- **JSON** for world data, NPCs, quests, and rules
-- **Pytest** for testing routing and state logic
+- **PydanticAI** for LLM-backed specialist agents
+- **JSON / structured data** for world data, NPCs, quests, and rules
+- **Pytest** for testing routing, orchestration, state logic, and rules behavior
+- **FastAPI / Uvicorn** for optional local web-serving or API development
 
 ---
 
@@ -112,7 +112,7 @@ Clone the repository and move into the project folder:
 
 ```
 git clone https://github.com/christopherellis01/Agentic_RPG_Game_Master.git
-cd agentic-game-rpg-master
+cd Agentic_RPG_Game_Master
 ```
 
 Create and activate a virtual environment:
@@ -137,9 +137,9 @@ python -m ipykernel install --user --name=agentic_rpg_venv --display-name "Pytho
 
 ## Running the Project
 
-For early development, the easiest entry point will likely be the notebook prototype:
+The easiest development entry point is the notebook prototype:
 
-```
+```bash
 jupyter lab
 ```
 
@@ -149,19 +149,63 @@ Then open:
 notebooks/prototype_game_loop.ipynb
 ```
 
+The project also includes an HTML demo in the demo/ folder. To serve it locally, run this from the repository root:
+
+```
+python -m http.server 8000
+```
+
+Then open:
+
+```
+http://localhost:8000/demo/shattered_vale_demo.html
+```
+
+Avoid opening the HTML file directly with a file:/// browser path, because it may not be able to access related project files correctly.
+
+
 As the project matures, the main orchestration flow can also be run through Python modules in `src/`.
 
 ---
 
 ## Current status
 
-This project is currently in the architecture and setup phase. The initial focus is on:
+The project has moved beyond the initial scaffolding phase. Current implemented pieces include:
 
-- defining structured game content
-- implementing canonical and transient state models
-- building the router and orchestrator skeleton
-- stubbing specialist components
-- testing one full turn from input to narration
+- router logic for classifying player actions and selecting agent paths
+- an orchestrator skeleton for managing turn flow
+- structured state models and state manager logic
+- specialist agents for lore, NPC behavior, quests, and rules resolution
+- an integrated Rules Agent with deterministic handling for combat, dialogue, and exploration actions
+- a compatibility layer for the standalone rules agent module
+- notebook-based prototyping
+- pytest coverage for routing, orchestration, state management, and rules behavior
+
+Current test status:
+
+```bash
+python -m pytest
+```
+
+Expected Result
+
+```
+14 passed
+```
+
+The next development focus is confirming a complete playable turn through the notebook or demo flow, from player input through routing, agent resolution, state update, and final narration.
+
+---
+
+## Rules Agent integration note
+
+The canonical Rules Agent used by the main project is:
+
+```
+src/agents/rules_agent.py
+```
+
+The `rules_agent_module/` folder remains in the repository as a standalone contribution/demo module and source of tests, but its core behavior has been integrated into the main Rules Agent path. The main Rules Agent now supports deterministic resolution for simple combat, dialogue, and exploration actions, while preserving the project rule that agents propose state changes rather than directly modifying canonical game state.
 
 ---
 
