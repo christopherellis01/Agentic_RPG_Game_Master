@@ -199,13 +199,18 @@ The next development focus is confirming a complete playable turn through the no
 
 ## Rules Agent integration note
 
-The canonical Rules Agent used by the main project is:
+The Rules Agent is now integrated into the async turn orchestration flow. A combat player action can be routed to the Rules Agent, resolved through deterministic rules logic, and stored as structured specialist output with proposed state changes for later validation and state update.
+
+Example verified flow:
 
 ```
-src/agents/rules_agent.py
+Player action: "I attack the goblin with my sword."
+Selected route: combat
+Execution plan: ['rules_agent']
+Rules Agent output: combat success with structured damage and proposed state changes
 ```
 
-The `rules_agent_module/` folder remains in the repository as a standalone contribution/demo module and source of tests, but its core behavior has been integrated into the main Rules Agent path. The main Rules Agent now supports deterministic resolution for simple combat, dialogue, and exploration actions, while preserving the project rule that agents propose state changes rather than directly modifying canonical game state.
+This confirms that the Rules Agent is not only passing isolated tests, but is also being called during an actual game-turn flow.
 
 ---
 
