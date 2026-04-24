@@ -274,6 +274,7 @@ async def execute_planned_nodes_async(
 
     return results, False, None
 
+from src.narrator import narrate_turn
 
 def run_turn(
     state: GameState,
@@ -394,6 +395,19 @@ async def run_turn_async(
         state=state,
         execution_plan=execution_plan,
         fail_nodes=fail_nodes,
+    )
+
+    narration = narrate_turn(
+       player_action=player_action,
+       specialist_outputs=state.turn.specialist_outputs,
+    )
+
+    state.turn.current_turn_events.append(
+        EventRecord(
+            event_type="narration_created",
+            summary=narration,
+            source_node="narrator",
+        )
     )
 
     return OrchestrationResult(
