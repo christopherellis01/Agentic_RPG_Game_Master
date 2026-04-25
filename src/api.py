@@ -299,6 +299,12 @@ async def run_turn(req: TurnRequest) -> Dict[str, Any]:
             rules_output = await run_rules_agent(rules_input)
             rules_payload = rules_output.model_dump()
 
+            activity.append({
+                "name": "rules",
+                "status": "done",
+                "summary": rules_output.mechanical_summary,
+            })
+
         if goblin and rules_output.damage_dealt > 0:
             new_goblin_hp = max(goblin.hp - rules_output.damage_dealt, 0)
 
@@ -328,14 +334,8 @@ async def run_turn(req: TurnRequest) -> Dict[str, Any]:
                 "name": "state",
                 "status": "skipped",
                 "summary": "No combatant HP update was needed.",
-    })
-            
-            activity.append({
-                "name": "rules",
-                "status": "done",
-                "summary": rules_output.mechanical_summary,
             })
-
+            
             dialogue.append({
                 "who": "narrator",
                 "speaker": "Rules Agent",
