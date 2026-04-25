@@ -42,6 +42,20 @@ class PartyStatus(BaseModel):
     conditions: List[str] = Field(default_factory=list)
     gold: int = 0
 
+class CombatantState(BaseModel):
+    """
+    Tracks a combat-capable entity in the current game state.
+
+    This can represent enemies, allies, or neutral creatures that may participate
+    in combat or rules-based encounters.
+    """
+
+    combatant_id: str
+    name: str
+    hp: int
+    max_hp: int
+    status_effects: List[str] = Field(default_factory=list)
+    is_hostile: bool = True
 
 class SpecialistOutput(BaseModel):
     node_name: str
@@ -68,6 +82,7 @@ class CanonicalGameState(BaseModel):
     inventory: List[str] = Field(default_factory=list)
     party_status: PartyStatus = Field(default_factory=PartyStatus)
     recent_events: List[EventRecord] = Field(default_factory=list)
+    combatants: Dict[str, CombatantState] = Field(default_factory=dict)
 
 
 class TransientTurnState(BaseModel):

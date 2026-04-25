@@ -45,6 +45,7 @@ from src.agents.npc_agent import run_npc_agent
 from src.agents.quest_agent import run_quest_agent
 from src.models.state_models import GameState, EventRecord
 from src.agents.rules_agent import RulesAgentInput, run_rules_agent
+from src.state_updater import StatePatch, apply_state_patches
 
 # APP + CORS
 app = FastAPI(title="Agentic RPG Game Master — Demo API")
@@ -67,7 +68,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 
 # SESSION STATE (single in-memory session for demo purposes)
 _state: Optional[GameState] = None
@@ -109,6 +109,7 @@ class StateSnapshot(BaseModel):
     scene: str
     npcs: List[Dict[str, Any]]
     quests: List[Dict[str, Any]]
+    combatants: List[Dict[str, Any]] = Field(default_factory=list)
 
 
 class TurnRequest(BaseModel):
@@ -148,8 +149,18 @@ def _public_snapshot(state: GameState) -> Dict[str, Any]:
             }
             for q in state.canonical.active_quests
         ],
+        "combatants": [
+            {
+                "id": cid,
+                "name": c.name,
+                "hp": c.hp,
+                "max_hp": c.max_hp,
+                "status_effects": c.status_effects,
+                "is_hostile": c.is_hostile,
+            }
+            for cid, c in state.canonical.combatants.items()
+        ],
     }
-
 
 # ROUTES
 @app.get("/state", response_model=StateSnapshot)
@@ -266,6 +277,8 @@ async def run_turn(req: TurnRequest) -> Dict[str, Any]:
             ))
 
         if want_rules:
+            goblin = state.canonical.combatants.get("goblin")
+
             rules_input = RulesAgentInput(
                 player_action=req.player_action,
                 current_scene=state.canonical.current_scene,
@@ -279,13 +292,44 @@ async def run_turn(req: TurnRequest) -> Dict[str, Any]:
                     "propose state changes but must not commit them directly."
                 ),
                 difficulty="medium",
-                enemy_name="Goblin",
-                enemy_hp=15,
+                enemy_name=goblin.name if goblin else "Goblin",
+                enemy_hp=goblin.hp if goblin else 15,
             )
 
             rules_output = await run_rules_agent(rules_input)
             rules_payload = rules_output.model_dump()
 
+        if goblin and rules_output.damage_dealt > 0:
+            new_goblin_hp = max(goblin.hp - rules_output.damage_dealt, 0)
+
+            patch = StatePatch(
+                target_type="combatant",
+                target_id="goblin",
+                field="hp",
+                operation="set",
+                value=new_goblin_hp,
+                reason=rules_output.mechanical_summary,
+                source_node="rules_agent",
+            )
+
+            state_update_result = apply_state_patches(
+                state=state,
+                patches=[patch],
+                source_node="state_updater",
+            )
+
+            activity.append({
+                "name": "state",
+                "status": "done",
+                "summary": "; ".join(state_update_result.messages),
+            })
+        else:
+            activity.append({
+                "name": "state",
+                "status": "skipped",
+                "summary": "No combatant HP update was needed.",
+    })
+            
             activity.append({
                 "name": "rules",
                 "status": "done",
@@ -356,7 +400,7 @@ async def run_turn(req: TurnRequest) -> Dict[str, Any]:
 
     # Honest disclosures about what the project does not yet have.
     activity.append({"name": "critic", "status": "skipped", "summary": "Critic not yet implemented."})
-    activity.append({"name": "state", "status": "skipped", "summary": "State Updater not yet implemented."})
+    # activity.append({"name": "state", "status": "skipped", "summary": "State Updater not yet implemented."})
     # activity.append({"name": "narrator", "status": "skipped", "summary": "Narrator not yet implemented."})
 
     return {

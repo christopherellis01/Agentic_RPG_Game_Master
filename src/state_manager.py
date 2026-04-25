@@ -15,6 +15,7 @@ from src.models.state_models import (
     QuestState,
     SessionExecutionMetadata,
     TransientTurnState,
+    CombatantState,
 )
 
 # PROJECT PATHS
@@ -112,14 +113,24 @@ def build_initial_canonical_state(
     ]
 
     return CanonicalGameState(
-        current_scene=current_scene,
-        location=starting_location,
-        active_quests=build_quest_states(quest_data),
-        npc_states=build_npc_states(npc_data),
-        inventory=[],
-        party_status=PartyStatus(hp=20, max_hp=20, conditions=[], gold=0),
-        recent_events=recent_events,
-    )
+    current_scene=current_scene,
+    location=starting_location,
+    active_quests=build_quest_states(quest_data),
+    npc_states=build_npc_states(npc_data),
+    inventory=[],
+    party_status=PartyStatus(hp=20, max_hp=20, conditions=[], gold=0),
+    combatants={
+        "goblin": CombatantState(
+            combatant_id="goblin",
+            name="Goblin",
+            hp=15,
+            max_hp=15,
+            status_effects=[],
+            is_hostile=True,
+        )
+    },
+    recent_events=recent_events,
+)
 
 
 def build_initial_turn_state(
@@ -174,6 +185,7 @@ def build_initial_state(
     quest_data = load_json(QUEST_PATH)
 
     canonical = build_initial_canonical_state(world_data, npc_data, quest_data)
+    
     turn = build_initial_turn_state(player_action=player_action)
     meta = build_session_metadata(session_id=session_id)
 
