@@ -180,6 +180,10 @@ The project has moved beyond the initial scaffolding phase. Current implemented 
 - a compatibility layer for the standalone rules agent module
 - notebook-based prototyping
 - pytest coverage for routing, orchestration, state management, and rules behavior
+- structured State Updater support using `StatePatch` objects
+- canonical combatant state with persistent HP tracking
+- demo API support for combat turns that update and remember Goblin HP
+- API-level test coverage for combat state persistence
 
 Current test status:
 
@@ -190,10 +194,33 @@ python -m pytest
 Expected Result
 
 ```
-14 passed
+15 passed
 ```
 
 The next development focus is confirming a complete playable turn through the notebook or demo flow, from player input through routing, agent resolution, state update, and final narration.
+
+
+### State Updater and persistent combat state
+
+The demo API now includes a structured State Updater that applies approved state patches to canonical game state. Combatant state has been added to the canonical model, including a seeded Goblin encounter used for combat testing.
+
+Combat turns now follow this flow:
+
+```text
+Player action
+→ Router selects combat
+→ Rules Agent resolves the attack
+→ State Updater applies combatant HP changes
+→ Narrator produces a player-facing response
+→ Updated state persists across turns
+
+For example, if the Rules Agent resolves an attack that deals 10 damage, the State Updater changes the Goblin’s HP from 15 to 5, and the next turn starts from that updated HP instead of resetting to 15.
+
+This behavior is covered by an API test in:
+
+```
+tests/test_api_combat_state.py
+```
 
 ---
 
@@ -230,3 +257,4 @@ Agnes Sithole
 - expanded world data
 - improved debugging and turn tracing
 - optional UI or web front end
+- better combat balancing and expanded encounter state
