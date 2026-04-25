@@ -23,9 +23,13 @@ Design notes:
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from typing import Any, Dict, List, Optional
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -40,10 +44,20 @@ from src.agents.lore_agent import run_lore_agent
 from src.agents.npc_agent import run_npc_agent
 from src.agents.quest_agent import run_quest_agent
 from src.models.state_models import GameState, EventRecord
-
+from src.agents.rules_agent import RulesAgentInput, run_rules_agent
 
 # APP + CORS
 app = FastAPI(title="Agentic RPG Game Master — Demo API")
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+DEMO_DIR = PROJECT_ROOT / "demo"
+
+app.mount("/demo", StaticFiles(directory=DEMO_DIR), name="demo")
+
+
+@app.get("/")
+def read_root():
+    return FileResponse(DEMO_DIR / "shattered_vale_demo.html")
 
 # Allow the HTML file to talk to the server whether it's opened via file://
 # or served from a different port. In production you'd tighten this.
@@ -87,6 +101,7 @@ class TurnResponse(BaseModel):
     npc: Optional[Dict[str, Any]] = None
     quest: Optional[Dict[str, Any]] = None
     state_snapshot: Dict[str, Any]
+    rules: Optional[Dict[str, Any]] = None
 
 
 class StateSnapshot(BaseModel):
@@ -182,6 +197,7 @@ async def run_turn(req: TurnRequest) -> Dict[str, Any]:
     lore_payload: Optional[Dict[str, Any]] = None
     npc_payload: Optional[Dict[str, Any]] = None
     quest_payload: Optional[Dict[str, Any]] = None
+    rules_payload: Optional[Dict[str, Any]] = None
 
     # Map route -> which real agents fire.
     # If the player targeted an NPC, always run the NPC agent regardless of route,
@@ -190,6 +206,7 @@ async def run_turn(req: TurnRequest) -> Dict[str, Any]:
     want_npc = bool(req.target_npc_id) or decision.route in ("dialogue", "mixed_action")
     want_lore = decision.route in ("lore_query", "exploration")
     want_quest = decision.route in ("quest_progression", "mixed_action")
+    want_rules = decision.route in ("combat", "mixed_action")
 
     try:
         if want_npc and req.target_npc_id:
@@ -241,12 +258,63 @@ async def run_turn(req: TurnRequest) -> Dict[str, Any]:
                 "status": "done",
                 "summary": quest_output.progress_interpretation[:140],
             })
-            # Log the progress interpretation as an event for downstream UI use
+
             state.canonical.recent_events.append(EventRecord(
                 event_type="quest_interpretation",
                 summary=quest_output.progress_interpretation[:200],
                 source_node="quest_agent",
             ))
+
+        if want_rules:
+            rules_input = RulesAgentInput(
+                player_action=req.player_action,
+                current_scene=state.canonical.current_scene,
+                character_hp=state.canonical.party_status.hp,
+                character_max_hp=state.canonical.party_status.max_hp,
+                relevant_stats=[],
+                inventory=state.canonical.inventory,
+                rules_summary=(
+                    "Use simple d10-style resolution. High rolls succeed, "
+                    "middle rolls partially succeed, low rolls fail. Agents may "
+                    "propose state changes but must not commit them directly."
+                ),
+                difficulty="medium",
+                enemy_name="Goblin",
+                enemy_hp=15,
+            )
+
+            rules_output = await run_rules_agent(rules_input)
+            rules_payload = rules_output.model_dump()
+
+            activity.append({
+                "name": "rules",
+                "status": "done",
+                "summary": rules_output.mechanical_summary,
+            })
+
+            dialogue.append({
+                "who": "narrator",
+                "speaker": "Rules Agent",
+                "tone": "RULES · RESOLUTION",
+                "said": rules_output.mechanical_summary,
+            })
+
+            rules_output = await run_rules_agent(rules_input)
+            rules_payload = rules_output.model_dump()
+
+            activity.append({
+                "name": "rules",
+                "status": "done",
+                "summary": rules_output.mechanical_summary,
+            })
+
+            dialogue.append({
+                "who": "narrator",
+                "speaker": "Rules Agent",
+                "tone": "RULES · RESOLUTION",
+                "said": rules_output.mechanical_summary,
+            })
+           
 
     except Exception as e:
         # Don't crash the whole turn if one agent errors — report it honestly.
@@ -256,11 +324,56 @@ async def run_turn(req: TurnRequest) -> Dict[str, Any]:
             "summary": f"Agent error: {type(e).__name__}: {e}",
         })
         raise HTTPException(status_code=500, detail=str(e))
+    
+    if rules_payload:
+        damage = rules_payload.get("damage_dealt", 0)
+        outcome = rules_payload.get("outcome", "unknown")
+
+        if outcome == "success" and damage > 0:
+            narration = (
+                f"You follow through on your action: {req.player_action} "
+                f"The strike lands cleanly, dealing {damage} damage."
+            )
+        elif outcome == "partial_success" and damage > 0:
+            narration = (
+                f"You attempt: {req.player_action} "
+                f"It partially works, dealing {damage} damage."
+            )
+        elif outcome == "failure":
+            narration = (
+                f"You attempt: {req.player_action} "
+                "but it does not succeed this time."
+            )
+        else:
+            narration = rules_payload.get(
+                "mechanical_summary",
+                "The action is resolved.",
+            )
+
+        dialogue.append({
+            "who": "narrator",
+            "speaker": "Narrator",
+            "tone": "NARRATION",
+            "said": narration,
+        })
+
+        activity.append({
+            "name": "narrator",
+            "status": "done",
+            "summary": "Created player-facing narration from Rules Agent output.",
+        })
+    else:
+        activity.append({
+            "name": "narrator",
+            "status": "skipped",
+            "summary": "Narrator not needed for this route yet.",
+        })
+
 
     # Honest disclosures about what the project does not yet have.
     activity.append({"name": "critic", "status": "skipped", "summary": "Critic not yet implemented."})
     activity.append({"name": "state", "status": "skipped", "summary": "State Updater not yet implemented."})
-    activity.append({"name": "narrator", "status": "skipped", "summary": "Narrator not yet implemented."})
+    # activity.append({"name": "narrator", "status": "skipped", "summary": "Narrator not yet implemented."})
 
     return {
         "route": decision.route,
@@ -271,4 +384,5 @@ async def run_turn(req: TurnRequest) -> Dict[str, Any]:
         "npc": npc_payload,
         "quest": quest_payload,
         "state_snapshot": _public_snapshot(state),
+        "rules": rules_payload,
     }
