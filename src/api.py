@@ -298,22 +298,6 @@ async def run_turn(req: TurnRequest) -> Dict[str, Any]:
                 "tone": "RULES · RESOLUTION",
                 "said": rules_output.mechanical_summary,
             })
-
-            rules_output = await run_rules_agent(rules_input)
-            rules_payload = rules_output.model_dump()
-
-            activity.append({
-                "name": "rules",
-                "status": "done",
-                "summary": rules_output.mechanical_summary,
-            })
-
-            dialogue.append({
-                "who": "narrator",
-                "speaker": "Rules Agent",
-                "tone": "RULES · RESOLUTION",
-                "said": rules_output.mechanical_summary,
-            })
            
 
     except Exception as e:
