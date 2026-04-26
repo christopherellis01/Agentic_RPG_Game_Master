@@ -16,6 +16,21 @@ Player action
 → Updated game state
 ```
 
+## Run the test suite
+
+Before starting the live demo, run the project tests from the repository root:
+
+```
+python -m pytest
+```
+Expected result:
+
+`15 passed`
+
+This confirms that the router, Rules Agent integration, State Updater, API combat state persistence, and supporting project tests are working before the browser demo begins.
+
+---
+
 ## Start the server
 
 ```
