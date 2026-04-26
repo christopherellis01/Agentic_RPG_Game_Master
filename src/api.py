@@ -279,69 +279,101 @@ async def run_turn(req: TurnRequest) -> Dict[str, Any]:
             ))
 
         if want_rules:
-            rules_input = RulesAgentInput(
-                player_action=req.player_action,
-                current_scene=state.canonical.current_scene,
-                character_hp=state.canonical.party_status.hp,
-                character_max_hp=state.canonical.party_status.max_hp,
-                relevant_stats=[],
-                inventory=state.canonical.inventory,
-                rules_summary=(
-                    "Use simple d10-style resolution. High rolls succeed, "
-                    "middle rolls partially succeed, low rolls fail. Agents may "
-                    "propose state changes but must not commit them directly."
-                ),
-                difficulty="medium",
-                enemy_name=goblin.name if goblin else "Goblin",
-                enemy_hp=goblin.hp if goblin else 15,
-            )
-
-            rules_output = await run_rules_agent(rules_input)
-            rules_payload = rules_output.model_dump()
-
-            activity.append({
-                "name": "rules",
-                "status": "done",
-                "summary": rules_output.mechanical_summary,
-            })
-
-            if goblin and rules_output.damage_dealt > 0:
-                new_goblin_hp = max(goblin.hp - rules_output.damage_dealt, 0)
-
-                patch = StatePatch(
-                    target_type="combatant",
-                    target_id="goblin",
-                    field="hp",
-                    operation="set",
-                    value=new_goblin_hp,
-                    reason=rules_output.mechanical_summary,
-                    source_node="rules_agent",
-                )
-
-                state_update_result = apply_state_patches(
-                    state=state,
-                    patches=[patch],
-                    source_node="state_updater",
-                )
+            if goblin and goblin.hp <= 0:
+                rules_payload = {
+                    "resolution_type": "combat",
+                    "outcome": "already_resolved",
+                    "mechanical_summary": "The Goblin is already defeated.",
+                    "damage_dealt": 0,
+                    "damage_taken": 0,
+                    "status_effects": [],
+                    "proposed_state_changes": [],
+                    "suggested_next_step": "Choose a different action.",
+                }
 
                 activity.append({
-                    "name": "state",
+                    "name": "rules",
                     "status": "done",
-                    "summary": "; ".join(state_update_result.messages),
+                    "summary": "The Goblin is already defeated.",
                 })
-            else:
+
                 activity.append({
                     "name": "state",
                     "status": "skipped",
-                    "summary": "No combatant HP update was needed.",
+                    "summary": "No HP update needed because the Goblin is already at 0 HP.",
                 })
 
-            dialogue.append({
-                "who": "narrator",
-                "speaker": "Rules Agent",
-                "tone": "RULES · RESOLUTION",
-                "said": rules_output.mechanical_summary,
-            })         
+                dialogue.append({
+                    "who": "narrator",
+                    "speaker": "Rules Agent",
+                    "tone": "RULES · RESOLUTION",
+                    "said": "The Goblin is already defeated.",
+                })
+
+            else:
+                rules_input = RulesAgentInput(
+                    player_action=req.player_action,
+                    current_scene=state.canonical.current_scene,
+                    character_hp=state.canonical.party_status.hp,
+                    character_max_hp=state.canonical.party_status.max_hp,
+                    relevant_stats=[],
+                    inventory=state.canonical.inventory,
+                    rules_summary=(
+                        "Use simple d10-style resolution. High rolls succeed, "
+                        "middle rolls partially succeed, low rolls fail. Agents may "
+                        "propose state changes but must not commit them directly."
+                    ),
+                    difficulty="medium",
+                    enemy_name=goblin.name if goblin else "Goblin",
+                    enemy_hp=goblin.hp if goblin else 15,
+                )
+
+                rules_output = await run_rules_agent(rules_input)
+                rules_payload = rules_output.model_dump()
+
+                activity.append({
+                    "name": "rules",
+                    "status": "done",
+                    "summary": rules_output.mechanical_summary,
+                })
+
+                if goblin and rules_output.damage_dealt > 0:
+                    new_goblin_hp = max(goblin.hp - rules_output.damage_dealt, 0)
+
+                    patch = StatePatch(
+                        target_type="combatant",
+                        target_id="goblin",
+                        field="hp",
+                        operation="set",
+                        value=new_goblin_hp,
+                        reason=rules_output.mechanical_summary,
+                        source_node="rules_agent",
+                    )
+
+                    state_update_result = apply_state_patches(
+                        state=state,
+                        patches=[patch],
+                        source_node="state_updater",
+                    )
+
+                    activity.append({
+                        "name": "state",
+                        "status": "done",
+                        "summary": "; ".join(state_update_result.messages),
+                    })
+                else:
+                    activity.append({
+                        "name": "state",
+                        "status": "skipped",
+                        "summary": "No combatant HP update was needed.",
+                    })
+
+                dialogue.append({
+                    "who": "narrator",
+                    "speaker": "Rules Agent",
+                    "tone": "RULES · RESOLUTION",
+                    "said": rules_output.mechanical_summary,
+                })       
 
     except Exception as e:
         error_summary = f"Agent error: {type(e).__name__}: {e}"
@@ -357,7 +389,7 @@ async def run_turn(req: TurnRequest) -> Dict[str, Any]:
             "speaker": "System",
             "tone": "AGENT ERROR · DEMO FALLBACK",
             "said": (
-                "One of the live agent calls failed, so this turn was not fully resolved.\n\n"
+                "That specialist agent could not complete its live response, so the demo safely skipped that step. The rest of the system is still running.\n\n"
                 f"Error detail: {error_summary}"
             ),
         })
