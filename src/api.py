@@ -210,6 +210,8 @@ async def run_turn(req: TurnRequest) -> Dict[str, Any]:
     quest_payload: Optional[Dict[str, Any]] = None
     rules_payload: Optional[Dict[str, Any]] = None
 
+    goblin = state.canonical.combatants.get("goblin")
+
     # Map route -> which real agents fire.
     # If the player targeted an NPC, always run the NPC agent regardless of route,
     # because "talking to Mara" should produce Mara's voice even if the router
@@ -277,8 +279,6 @@ async def run_turn(req: TurnRequest) -> Dict[str, Any]:
             ))
 
         if want_rules:
-            goblin = state.canonical.combatants.get("goblin")
-
             rules_input = RulesAgentInput(
                 player_action=req.player_action,
                 current_scene=state.canonical.current_scene,
@@ -305,53 +305,86 @@ async def run_turn(req: TurnRequest) -> Dict[str, Any]:
                 "summary": rules_output.mechanical_summary,
             })
 
-        if goblin and rules_output.damage_dealt > 0:
-            new_goblin_hp = max(goblin.hp - rules_output.damage_dealt, 0)
+            if goblin and rules_output.damage_dealt > 0:
+                new_goblin_hp = max(goblin.hp - rules_output.damage_dealt, 0)
 
-            patch = StatePatch(
-                target_type="combatant",
-                target_id="goblin",
-                field="hp",
-                operation="set",
-                value=new_goblin_hp,
-                reason=rules_output.mechanical_summary,
-                source_node="rules_agent",
-            )
+                patch = StatePatch(
+                    target_type="combatant",
+                    target_id="goblin",
+                    field="hp",
+                    operation="set",
+                    value=new_goblin_hp,
+                    reason=rules_output.mechanical_summary,
+                    source_node="rules_agent",
+                )
 
-            state_update_result = apply_state_patches(
-                state=state,
-                patches=[patch],
-                source_node="state_updater",
-            )
+                state_update_result = apply_state_patches(
+                    state=state,
+                    patches=[patch],
+                    source_node="state_updater",
+                )
 
-            activity.append({
-                "name": "state",
-                "status": "done",
-                "summary": "; ".join(state_update_result.messages),
-            })
-        else:
-            activity.append({
-                "name": "state",
-                "status": "skipped",
-                "summary": "No combatant HP update was needed.",
-            })
-            
+                activity.append({
+                    "name": "state",
+                    "status": "done",
+                    "summary": "; ".join(state_update_result.messages),
+                })
+            else:
+                activity.append({
+                    "name": "state",
+                    "status": "skipped",
+                    "summary": "No combatant HP update was needed.",
+                })
+
             dialogue.append({
                 "who": "narrator",
                 "speaker": "Rules Agent",
                 "tone": "RULES · RESOLUTION",
                 "said": rules_output.mechanical_summary,
-            })
-           
+            })         
 
     except Exception as e:
-        # Don't crash the whole turn if one agent errors — report it honestly.
+        error_summary = f"Agent error: {type(e).__name__}: {e}"
+
         activity.append({
             "name": "error",
             "status": "skipped",
-            "summary": f"Agent error: {type(e).__name__}: {e}",
+            "summary": error_summary,
         })
-        raise HTTPException(status_code=500, detail=str(e))
+
+        dialogue.append({
+            "who": "narrator",
+            "speaker": "System",
+            "tone": "AGENT ERROR · DEMO FALLBACK",
+            "said": (
+                "One of the live agent calls failed, so this turn was not fully resolved.\n\n"
+                f"Error detail: {error_summary}"
+            ),
+        })
+
+        activity.append({
+            "name": "narrator",
+            "status": "done",
+            "summary": "Reported agent failure using demo fallback narration.",
+        })
+
+        activity.append({
+            "name": "critic",
+            "status": "skipped",
+            "summary": "Critic not yet implemented.",
+        })
+
+        return {
+            "route": decision.route,
+            "route_reason": decision.reason,
+            "agent_activity": activity,
+            "dialogue": dialogue,
+            "lore": lore_payload,
+            "npc": npc_payload,
+            "quest": quest_payload,
+            "rules": rules_payload,
+            "state_snapshot": _public_snapshot(state),
+        }
     
     if rules_payload:
         damage = rules_payload.get("damage_dealt", 0)

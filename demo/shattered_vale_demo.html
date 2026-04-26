@@ -801,20 +801,25 @@
                             <div class="agent-name">Quest</div>
                             <div class="agent-status">idle</div>
                         </li>
+                        <li class="agent-row" data-agent="rules">
+                            <div class="agent-rune">⚔</div>
+                            <div class="agent-name">Rules</div>
+                            <div class="agent-status">idle</div>
+                        </li>
                         <li class="agent-row not-implemented" data-agent="critic">
                             <div class="agent-rune">C</div>
                             <div class="agent-name">Critic</div>
                             <div class="agent-status">not built</div>
                         </li>
-                        <li class="agent-row not-implemented" data-agent="state">
+                        <li class="agent-row" data-agent="state">
                             <div class="agent-rune">S</div>
                             <div class="agent-name">State Updater</div>
-                            <div class="agent-status">not built</div>
+                            <div class="agent-status">idle</div>
                         </li>
-                        <li class="agent-row not-implemented" data-agent="narrator">
+                        <li class="agent-row" data-agent="narrator">
                             <div class="agent-rune">⚘</div>
                             <div class="agent-name">Narrator</div>
-                            <div class="agent-status">not built</div>
+                            <div class="agent-status">idle</div>
                         </li>
                     </ul>
                     <div class="route-badge" id="route-badge" style="display:none"></div>
@@ -841,6 +846,7 @@
         const API = "http://127.0.0.1:8000";
 
         const quickActions = [
+            { label: "Draw your sword and attack the goblin.", action: "I attack the goblin with my sword.", npc: "" },
             { label: "Approach the bar and ask Mara what's been happening.", action: "I walk up to the bar and ask Mara what's been happening around Oakshade lately.", npc: "mara_innkeeper" },
             { label: "Sit across from the hooded man in the corner.", action: "I sit down across from the hooded man in the corner.", npc: "corvin_stranger" },
             { label: "Step outside and speak with Harlan at the forge.", action: "I step outside to the forge and ask Harlan what he's been hearing.", npc: "harlan_smith" },
@@ -849,8 +855,14 @@
         ];
 
         const agentStatusLabels = {
-            router: "routing", lore: "grounding world", npc: "voicing character",
-            quest: "checking progression"
+            router: "routing",
+            lore: "grounding world",
+            npc: "voicing character",
+            quest: "checking progression",
+            rules: "resolving action",
+            state: "updating state",
+            narrator: "narrating outcome",
+            critic: "validating"
         };
 
         const $ = id => document.getElementById(id);
@@ -986,7 +998,7 @@
                 $routeBadge.style.display = "inline-block";
             }
             for (const entry of activity) {
-                if (["critic", "state", "narrator"].includes(entry.name)) continue;
+                if (["critic"].includes(entry.name)) continue;
                 if (entry.name === "error") continue;
                 setAgentState(entry.name, "active", agentStatusLabels[entry.name] || "running");
                 await sleep(400);
