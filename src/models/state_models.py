@@ -4,8 +4,6 @@ from typing import Any, Dict, List, Literal, Optional
 from pydantic import BaseModel, Field, ConfigDict
 
 
-# SUPPORTING MODELS
-
 class EventRecord(BaseModel):
     event_type: str
     summary: str
@@ -42,20 +40,15 @@ class PartyStatus(BaseModel):
     conditions: List[str] = Field(default_factory=list)
     gold: int = 0
 
+
 class CombatantState(BaseModel):
-    """
-    Tracks a combat-capable entity in the current game state.
-
-    This can represent enemies, allies, or neutral creatures that may participate
-    in combat or rules-based encounters.
-    """
-
     combatant_id: str
     name: str
     hp: int
     max_hp: int
     status_effects: List[str] = Field(default_factory=list)
     is_hostile: bool = True
+
 
 class SpecialistOutput(BaseModel):
     node_name: str
@@ -69,8 +62,6 @@ class ProposedUpdate(BaseModel):
     changes: Dict[str, Any] = Field(default_factory=dict)
     reason: str
 
-
-# MAIN STATE MODELS
 
 class CanonicalGameState(BaseModel):
     model_config = ConfigDict(extra="forbid")

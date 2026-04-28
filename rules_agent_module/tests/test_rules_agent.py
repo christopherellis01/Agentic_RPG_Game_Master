@@ -1,4 +1,16 @@
-from src.agents.rules_agent import resolve_action
+from __future__ import annotations
+
+import importlib.util
+from pathlib import Path
+
+
+RULES_AGENT_PATH = Path(__file__).resolve().parents[1] / "src" / "agents" / "rules_agent.py"
+spec = importlib.util.spec_from_file_location("standalone_rules_agent", RULES_AGENT_PATH)
+rules_agent = importlib.util.module_from_spec(spec)
+assert spec.loader is not None
+spec.loader.exec_module(rules_agent)
+
+resolve_action = rules_agent.resolve_action
 
 
 def test_attack():

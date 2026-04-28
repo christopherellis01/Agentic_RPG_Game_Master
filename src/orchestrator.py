@@ -7,14 +7,11 @@ from pydantic import BaseModel, Field
 from src.models.state_models import EventRecord, GameState
 from src.router import RouteDecision, classify_route
 from src.state_manager import start_new_turn
-
 from src.models.state_models import SpecialistOutput
 from src.agents.rules_agent import RulesAgentInput, run_rules_agent
 
+
 class NodeExecutionResult(BaseModel):
-    """
-    Represents the result of executing one planned node.
-    """
     node_name: str
     status: str
     summary: str
@@ -22,9 +19,6 @@ class NodeExecutionResult(BaseModel):
 
 
 class OrchestrationResult(BaseModel):
-    """
-    Container for the result of one orchestration pass.
-    """
     player_action: str
     selected_route: str
     next_nodes: List[str] = Field(default_factory=list)
@@ -37,12 +31,6 @@ class OrchestrationResult(BaseModel):
 
 
 def build_execution_plan(decision: RouteDecision) -> List[str]:
-    """
-    Return the ordered node sequence for the selected route.
-
-    For now, this simply mirrors the router's recommended next_nodes.
-    Later, this is where you can enforce more explicit sequencing rules.
-    """
     return decision.next_nodes.copy()
 
 
@@ -51,12 +39,6 @@ def execute_planned_nodes(
     execution_plan: List[str],
     fail_nodes: Optional[List[str]] = None,
 ) -> tuple[List[NodeExecutionResult], bool, Optional[str]]:
-    """
-    Execute planned nodes using placeholder behavior with basic retry/fallback flow.
-
-    If a node appears in fail_nodes, this function simulates failure and retries
-    until max_retries is reached. If retries are exhausted, execution aborts.
-    """
     results: List[NodeExecutionResult] = []
     fail_nodes = fail_nodes or []
 
@@ -69,7 +51,6 @@ def execute_planned_nodes(
 
             if node_name in fail_nodes:
                 state.meta.retry_count += 1
-
                 state.turn.current_turn_events.append(
                     EventRecord(
                         event_type="node_retry",
@@ -85,19 +66,12 @@ def execute_planned_nodes(
                     result = NodeExecutionResult(
                         node_name=node_name,
                         status="failed",
-                        summary=(
-                            f"{node_name} failed after {attempt_count - 1} retries. "
-                            f"Execution aborted."
-                        ),
+                        summary=f"{node_name} failed after {attempt_count - 1} retries. Execution aborted.",
                         attempts=attempt_count - 1,
                     )
                     results.append(result)
 
-                    abort_reason = (
-                        f"{node_name} exceeded max retries "
-                        f"({state.meta.max_retries})."
-                    )
-
+                    abort_reason = f"{node_name} exceeded max retries ({state.meta.max_retries})."
                     state.turn.current_turn_events.append(
                         EventRecord(
                             event_type="execution_aborted",
@@ -105,18 +79,15 @@ def execute_planned_nodes(
                             source_node="orchestrator",
                         )
                     )
-
                     return results, True, abort_reason
 
             else:
-                result = NodeExecutionResult(
+                results.append(NodeExecutionResult(
                     node_name=node_name,
                     status="completed",
                     summary=f"Placeholder execution completed for {node_name}.",
                     attempts=attempt_count,
-                )
-                results.append(result)
-
+                ))
                 state.turn.current_turn_events.append(
                     EventRecord(
                         event_type="node_executed",
@@ -124,19 +95,14 @@ def execute_planned_nodes(
                         source_node="orchestrator",
                     )
                 )
-
                 completed = True
                 break
 
         if not completed and node_name not in fail_nodes:
-            # Defensive fallback; should not normally happen.
+            # Should not happen under normal conditions.
             abort_reason = f"{node_name} did not complete for an unknown reason."
             state.turn.current_turn_events.append(
-                EventRecord(
-                    event_type="execution_aborted",
-                    summary=abort_reason,
-                    source_node="orchestrator",
-                )
+                EventRecord(event_type="execution_aborted", summary=abort_reason, source_node="orchestrator")
             )
             return results, True, abort_reason
 
@@ -148,12 +114,6 @@ async def execute_planned_nodes_async(
     execution_plan: List[str],
     fail_nodes: Optional[List[str]] = None,
 ) -> tuple[List[NodeExecutionResult], bool, Optional[str]]:
-    """
-    Execute planned nodes for a real game turn.
-
-    This async version can call LLM-backed specialist agents.
-    For now, rules_agent is integrated; other agents still use placeholder behavior.
-    """
     results: List[NodeExecutionResult] = []
     fail_nodes = fail_nodes or []
 
@@ -177,30 +137,16 @@ async def execute_planned_nodes_async(
                 )
 
                 if attempt_count > state.meta.max_retries:
-                    result = NodeExecutionResult(
+                    abort_reason = f"{node_name} exceeded max retries ({state.meta.max_retries})."
+                    results.append(NodeExecutionResult(
                         node_name=node_name,
                         status="failed",
-                        summary=(
-                            f"{node_name} failed after {attempt_count - 1} retries. "
-                            f"Execution aborted."
-                        ),
+                        summary=f"{node_name} failed after {attempt_count - 1} retries. Execution aborted.",
                         attempts=attempt_count - 1,
-                    )
-                    results.append(result)
-
-                    abort_reason = (
-                        f"{node_name} exceeded max retries "
-                        f"({state.meta.max_retries})."
-                    )
-
+                    ))
                     state.turn.current_turn_events.append(
-                        EventRecord(
-                            event_type="execution_aborted",
-                            summary=abort_reason,
-                            source_node="orchestrator",
-                        )
+                        EventRecord(event_type="execution_aborted", summary=abort_reason, source_node="orchestrator")
                     )
-
                     return results, True, abort_reason
 
                 continue
@@ -232,7 +178,6 @@ async def execute_planned_nodes_async(
                         structured_data=rules_output.model_dump(),
                     )
                 )
-
                 state.turn.current_turn_events.append(
                     EventRecord(
                         event_type="node_executed",
@@ -240,28 +185,21 @@ async def execute_planned_nodes_async(
                         source_node="rules_agent",
                     )
                 )
-
-                results.append(
-                    NodeExecutionResult(
-                        node_name="rules_agent",
-                        status="completed",
-                        summary=rules_output.mechanical_summary,
-                        attempts=attempt_count,
-                    )
-                )
-
+                results.append(NodeExecutionResult(
+                    node_name="rules_agent",
+                    status="completed",
+                    summary=rules_output.mechanical_summary,
+                    attempts=attempt_count,
+                ))
                 break
 
-            # Placeholder behavior for agents not fully integrated yet.
-            results.append(
-                NodeExecutionResult(
-                    node_name=node_name,
-                    status="completed",
-                    summary=f"Placeholder execution completed for {node_name}.",
-                    attempts=attempt_count,
-                )
-            )
-
+            # Other agents not yet integrated; use placeholder.
+            results.append(NodeExecutionResult(
+                node_name=node_name,
+                status="completed",
+                summary=f"Placeholder execution completed for {node_name}.",
+                attempts=attempt_count,
+            ))
             state.turn.current_turn_events.append(
                 EventRecord(
                     event_type="node_executed",
@@ -269,43 +207,24 @@ async def execute_planned_nodes_async(
                     source_node="orchestrator",
                 )
             )
-
             break
 
     return results, False, None
 
+
 from src.narrator import narrate_turn
+
 
 def run_turn(
     state: GameState,
     player_action: str,
     fail_nodes: Optional[List[str]] = None,
 ) -> OrchestrationResult:
-    """
-    Main orchestration entry point for a single player turn.
-
-    This version:
-    1. Starts a new turn
-    2. Classifies the route
-    3. Stores the routing decision in state
-    4. Builds an execution plan
-    5. Executes placeholder nodes with retry/fallback behavior
-    6. Records orchestration events
-    7. Returns the orchestration result
-    """
-    # Reset turn state and advance metadata
     state = start_new_turn(state, player_action)
-
-    # Route the player action
     decision: RouteDecision = classify_route(player_action, state)
-
-    # Store selected route in transient turn state
     state.turn.selected_route = decision.route
-
-    # Build execution plan
     execution_plan = build_execution_plan(decision)
 
-    # Record routing events
     state.turn.current_turn_events.append(
         EventRecord(
             event_type="route_selected",
@@ -313,15 +232,9 @@ def run_turn(
             source_node="orchestrator",
         )
     )
-
     state.turn.current_turn_events.append(
-        EventRecord(
-            event_type="route_reason",
-            summary=decision.reason,
-            source_node="router",
-        )
+        EventRecord(event_type="route_reason", summary=decision.reason, source_node="router")
     )
-
     state.turn.current_turn_events.append(
         EventRecord(
             event_type="execution_plan_built",
@@ -330,7 +243,6 @@ def run_turn(
         )
     )
 
-    # Execute placeholder nodes with retry/fallback flow
     execution_results, aborted, abort_reason = execute_planned_nodes(
         state=state,
         execution_plan=execution_plan,
@@ -349,22 +261,15 @@ def run_turn(
         state=state,
     )
 
+
 async def run_turn_async(
     state: GameState,
     player_action: str,
     fail_nodes: Optional[List[str]] = None,
 ) -> OrchestrationResult:
-    """
-    Async orchestration entry point for a real single player turn.
-
-    This version can call async specialist agents such as run_rules_agent().
-    """
     state = start_new_turn(state, player_action)
-
     decision: RouteDecision = classify_route(player_action, state)
-
     state.turn.selected_route = decision.route
-
     execution_plan = build_execution_plan(decision)
 
     state.turn.current_turn_events.append(
@@ -374,15 +279,9 @@ async def run_turn_async(
             source_node="orchestrator",
         )
     )
-
     state.turn.current_turn_events.append(
-        EventRecord(
-            event_type="route_reason",
-            summary=decision.reason,
-            source_node="router",
-        )
+        EventRecord(event_type="route_reason", summary=decision.reason, source_node="router")
     )
-
     state.turn.current_turn_events.append(
         EventRecord(
             event_type="execution_plan_built",
@@ -398,16 +297,11 @@ async def run_turn_async(
     )
 
     narration = narrate_turn(
-       player_action=player_action,
-       specialist_outputs=state.turn.specialist_outputs,
+        player_action=player_action,
+        specialist_outputs=state.turn.specialist_outputs,
     )
-
     state.turn.current_turn_events.append(
-        EventRecord(
-            event_type="narration_created",
-            summary=narration,
-            source_node="narrator",
-        )
+        EventRecord(event_type="narration_created", summary=narration, source_node="narrator")
     )
 
     return OrchestrationResult(

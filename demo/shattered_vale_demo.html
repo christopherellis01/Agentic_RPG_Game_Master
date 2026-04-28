@@ -888,7 +888,7 @@
                     <div class="panel-title"><span class="sigil">☙</span> PRESENT</div>
                     <ul class="roster" id="roster"></ul>
                 </div>
-                
+
             </aside>
         </div>
 
@@ -903,7 +903,7 @@
         const quickActions = [
             { label: "Draw your sword and attack the goblin.", action: "I attack the goblin with my sword.", npc: "" },
             { label: "Attack the goblin again.", action: "I attack the goblin again.", npc: "" },
-            { label: "Reset the encounter and begin anew.", action: "", npc: "" }
+            { label: "Reset the encounter and begin anew.", action: "__reset__", npc: "" },
             { label: "Approach the bar and ask Mara what's been happening.", action: "I walk up to the bar and ask Mara what's been happening around Oakshade lately.", npc: "mara_innkeeper" },
             { label: "Sit across from the hooded man in the corner.", action: "I sit down across from the hooded man in the corner.", npc: "corvin_stranger" },
             { label: "Step outside and speak with Harlan at the forge.", action: "I step outside to the forge and ask Harlan what he's been hearing.", npc: "harlan_smith" },
@@ -938,6 +938,7 @@
         const $banner = $("connection-banner");
         const $connLabel = $("connection-label");
         const $agents = $("agents");
+        let currentSnapshot = null;
 
         function setAgentState(id, state, status) {
             const row = $agents.querySelector(`[data-agent="${id}"]`);
@@ -1074,6 +1075,7 @@
         }
 
         function renderSceneSnapshot(snapshot) {
+            currentSnapshot = snapshot;
             $location.textContent = snapshot.location || "—";
             $scene.textContent = snapshot.scene || "";
             renderRoster(snapshot);
@@ -1088,7 +1090,13 @@
                 const btn = document.createElement("button");
                 btn.className = "action-btn";
                 btn.textContent = a.label;
-                btn.addEventListener("click", () => sendTurn(a.action, a.npc));
+                btn.addEventListener("click", () => {
+                    if (a.action === "__reset__") {
+                        resetGame();
+                        return;
+                    }
+                    sendTurn(a.action, a.npc);
+                });
                 $actionGrid.appendChild(btn);
             });
         }
@@ -1096,6 +1104,7 @@
         function lockControls(locked) {
             $actionGrid.querySelectorAll("button").forEach(b => b.disabled = locked);
             $send.disabled = locked; $input.disabled = locked; $npcSelect.disabled = locked;
+            $restart.disabled = locked;
         }
 
         async function playAgentActivity(activity) {
@@ -1122,11 +1131,17 @@
         async function sendTurn(playerAction, npcId) {
             if (!playerAction || !playerAction.trim()) return;
             lockControls(true);
+            $connLabel.textContent = "RUNNING TURN...";
+            $connLabel.style.color = "var(--gold)";
+            appendDialogue({ who: "player", speaker: "You", said: playerAction });
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000);
             try {
                 const res = await fetch(`${API}/turn`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ player_action: playerAction, target_npc_id: npcId || null })
+                    body: JSON.stringify({ player_action: playerAction, target_npc_id: npcId || null }),
+                    signal: controller.signal
                 });
                 if (!res.ok) {
                     const err = await res.text();
@@ -1135,16 +1150,61 @@
                 const data = await res.json();
                 await playAgentActivity(data.agent_activity);
                 for (const d of data.dialogue) {
+                    if ((d.who || "").toLowerCase() === "player") continue;
                     appendDialogue(d);
                     await sleep(500);
                 }
                 renderSceneSnapshot(data.state_snapshot);
                 $input.value = "";
+                showConnected();
             } catch (e) {
-                showConnectionError(e.message);
+                const message = e.name === "AbortError"
+                    ? "The turn request took longer than 30 seconds. Check the server log for POST /turn and any agent/API errors."
+                    : e.message;
+                if (!resolveTurnLocally(playerAction, message)) {
+                    showConnectionError(message);
+                }
             } finally {
+                clearTimeout(timeoutId);
                 lockControls(false);
             }
+        }
+
+        function resolveTurnLocally(playerAction, reason) {
+            const action = playerAction.toLowerCase();
+            if (!currentSnapshot || !/(attack|strike|slash|stab|fight|hit)/.test(action)) return false;
+
+            const combatants = currentSnapshot.combatants || [];
+            const goblin = combatants.find(c => c.id === "goblin") || combatants[0];
+            if (!goblin) return false;
+
+            const oldHp = Number(goblin.hp || 0);
+            const damage = oldHp > 0 ? 5 : 0;
+            const newHp = Math.max(oldHp - damage, 0);
+            goblin.hp = newHp;
+
+            resetAgents();
+            setAgentState("router", "done", "done");
+            setAgentState("rules", "done", "local");
+            setAgentState("state", "done", "local");
+            setAgentState("narrator", "done", "local");
+            $routeBadge.textContent = "▸ COMBAT";
+            $routeBadge.style.display = "inline-block";
+
+            appendDialogue({
+                who: "narrator",
+                speaker: "Rules Agent",
+                tone: "LOCAL FALLBACK",
+                said: damage > 0
+                    ? `The live backend did not complete this turn, so the demo resolved the attack locally. The goblin takes ${damage} damage (${oldHp} -> ${newHp} HP).`
+                    : "The goblin is already defeated."
+            });
+            renderSceneSnapshot(currentSnapshot);
+            $banner.style.display = "block";
+            $banner.innerHTML = `Live backend did not answer this turn. Showing local combat fallback.<br><code>${escapeHtml(reason)}</code>`;
+            $connLabel.textContent = "LOCAL MODE";
+            $connLabel.style.color = "var(--gold)";
+            return true;
         }
 
         function showConnectionError(msg) {
@@ -1171,17 +1231,24 @@
 
         $send.addEventListener("click", () => sendTurn($input.value, $npcSelect.value));
         $input.addEventListener("keydown", e => { if (e.key === "Enter") sendTurn($input.value, $npcSelect.value); });
-        $restart.addEventListener("click", async () => {
+        async function resetGame() {
+            lockControls(true);
             try {
                 const res = await fetch(`${API}/reset`, { method: "POST" });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const snap = await res.json();
                 $dialogue.innerHTML = "";
                 resetAgents();
                 renderSceneSnapshot(snap);
+                showConnected();
             } catch (e) {
                 showConnectionError(e.message);
+            } finally {
+                lockControls(false);
             }
-        });
+        }
+
+        $restart.addEventListener("click", resetGame);
 
         renderActions();
         loadInitial();

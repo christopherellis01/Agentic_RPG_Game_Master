@@ -1,17 +1,7 @@
 """
-FastAPI server that wraps the real agents for the live browser demo.
-
-Endpoints:
-  GET  /state        -> current public view of the game state
-  POST /turn         -> run one turn with a player action (+ optional NPC target)
-  POST /reset        -> rebuild a fresh GameState
-
-Run from the project root:
-    uvicorn src.api:app --reload --port 8000
-
-The frontend (demo/shattered_vale_demo.html) calls these endpoints.
+FastAPI demo server. Run: uvicorn src.api:app --reload --port 8000
+Endpoints: GET /state  POST /turn  POST /reset
 """
-
 from __future__ import annotations
 
 import asyncio
@@ -47,7 +37,6 @@ from src.models.state_models import GameState, EventRecord
 from src.agents.rules_agent import RulesAgentInput, run_rules_agent
 from src.state_updater import StatePatch, apply_state_patches
 
-# APP + CORS
 app = FastAPI(title="Agentic RPG Game Master — Demo API")
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -76,8 +65,6 @@ def read_root():
         headers={"Cache-Control": "no-store"},
     )
 
-# Allow the HTML file to talk to the server whether it's opened via file://
-# or served from a different port. In production you'd tighten this.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -85,11 +72,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# SESSION STATE (single in-memory session for demo purposes)
 _state: Optional[GameState] = None
-
-# Give live LLM calls enough time to complete; the browser frontend has a
-# 30-second hard timeout, so we leave a small buffer below that.
+# Browser frontend hard-aborts at 30 s; leave a small buffer.
 AGENT_TIMEOUT_SECONDS = 25
 
 
@@ -103,9 +87,7 @@ def _get_state() -> GameState:
     return _state
 
 
-# RESPONSE MODELS
 class AgentRunRecord(BaseModel):
-    """One entry in the agent activity log the UI animates."""
     name: str
     status: str  # "done" | "skipped"
     route: Optional[str] = None
@@ -138,9 +120,7 @@ class TurnRequest(BaseModel):
     target_npc_id: Optional[str] = None
 
 
-# HELPERS
 def _public_snapshot(state: GameState) -> Dict[str, Any]:
-    """Return the parts of state the UI cares about."""
     return {
         "location": state.canonical.location,
         "scene": state.canonical.current_scene,
@@ -365,16 +345,13 @@ def _build_critic_input(
     )
 
 
-# ROUTES
 @app.get("/state", response_model=StateSnapshot)
 def get_state() -> Dict[str, Any]:
-    """Return the public view of the current state (used on page load)."""
     return _public_snapshot(_get_state())
 
 
 @app.post("/reset", response_model=StateSnapshot)
 def reset_state() -> Dict[str, Any]:
-    """Rebuild a fresh GameState from seed data."""
     global _state
     _state = build_initial_state(
         session_id="live_demo",
@@ -385,17 +362,6 @@ def reset_state() -> Dict[str, Any]:
 
 @app.post("/turn", response_model=TurnResponse)
 async def run_turn(req: TurnRequest) -> Dict[str, Any]:
-    """
-    Execute one turn with the real agents.
-
-    Flow:
-      1. Advance turn state with the player's action
-      2. Router classifies the action
-      3. Specialist agents run (NPC, Lore, Quest, Rules) — proposals collected
-      4. Critic validates all proposals — approve / warn / reject
-      5. Approved state patches are applied
-      6. Narrator builds player-facing prose from Rules output
-    """
     state = _get_state()
     state = start_new_turn(state, req.player_action)
 
@@ -431,10 +397,6 @@ async def run_turn(req: TurnRequest) -> Dict[str, Any]:
     want_lore = decision.route in ("lore_query", "exploration")
     want_quest = decision.route in ("quest_progression", "mixed_action")
     want_rules = decision.route in ("combat", "mixed_action")
-
-    # ------------------------------------------------------------------
-    # Phase 1: Run specialist agents, collect proposals (no state mutation)
-    # ------------------------------------------------------------------
 
     if want_npc and req.target_npc_id:
         npc_input = build_npc_agent_input(state, npc_id=req.target_npc_id)
@@ -595,10 +557,6 @@ async def run_turn(req: TurnRequest) -> Dict[str, Any]:
                 "said": rules_output.mechanical_summary,
             })
 
-    # ------------------------------------------------------------------
-    # Phase 2: Critic — validate all proposals before committing state
-    # ------------------------------------------------------------------
-
     critic_input = _build_critic_input(
         state=state,
         route=decision.route,
@@ -651,10 +609,6 @@ async def run_turn(req: TurnRequest) -> Dict[str, Any]:
                 ),
             })
 
-    # ------------------------------------------------------------------
-    # Phase 3: Apply state patches (only if critic did not reject)
-    # ------------------------------------------------------------------
-
     if pending_patches and critic_output.verdict != "reject":
         state_update_result = apply_state_patches(
             state=state,
@@ -678,10 +632,6 @@ async def run_turn(req: TurnRequest) -> Dict[str, Any]:
             "status": "skipped",
             "summary": "No state patches needed this turn.",
         })
-
-    # ------------------------------------------------------------------
-    # Phase 4: Narrator — build player-facing prose from Rules output
-    # ------------------------------------------------------------------
 
     if rules_payload:
         damage = rules_payload.get("damage_dealt", 0)

@@ -34,12 +34,6 @@ class RulesAgentOutput(BaseModel):
 
 
 def resolve_action_deterministic(agent_input: RulesAgentInput) -> Optional[RulesAgentOutput]:
-    """
-    Deterministic rules helper adapted from the standalone rules_agent_module.
-
-    This handles simple, recognizable player actions without requiring an LLM call.
-    It suggests state changes but does not directly modify game state.
-    """
     action = agent_input.player_action.lower().strip()
 
     if not action:
@@ -50,7 +44,6 @@ def resolve_action_deterministic(agent_input: RulesAgentInput) -> Optional[Rules
             suggested_next_step="Ask the player what they want to do next.",
         )
 
-    # Simple combat resolution
     if any(keyword in action for keyword in ["attack", "strike", "slash", "shoot", "stab"]):
         enemy_hp = agent_input.enemy_hp if agent_input.enemy_hp is not None else 20
         roll = random.randint(1, 10)
@@ -69,15 +62,9 @@ def resolve_action_deterministic(agent_input: RulesAgentInput) -> Optional[Rules
             summary = f"The attack misses or fails to land effectively. Roll = {roll}."
 
         new_enemy_hp = max(enemy_hp - damage, 0)
-
-        if agent_input.enemy_name:
-            proposed_changes = [
-                f"{agent_input.enemy_name} HP changes from {enemy_hp} to {new_enemy_hp}."
-            ]
-        else:
-            proposed_changes = [
-                f"Enemy HP changes from {enemy_hp} to {new_enemy_hp}."
-            ]
+        proposed_changes = [
+            f"{agent_input.enemy_name or 'Enemy'} HP changes from {enemy_hp} to {new_enemy_hp}."
+        ]
 
         return RulesAgentOutput(
             resolution_type="combat",
@@ -89,7 +76,6 @@ def resolve_action_deterministic(agent_input: RulesAgentInput) -> Optional[Rules
             suggested_next_step="Send this result to the critic/state updater before narration.",
         )
 
-    # Simple dialogue/social resolution
     if any(keyword in action for keyword in ["persuade", "convince", "negotiate", "ask", "talk"]):
         return RulesAgentOutput(
             resolution_type="skill_check",
@@ -104,7 +90,6 @@ def resolve_action_deterministic(agent_input: RulesAgentInput) -> Optional[Rules
             suggested_next_step="The narrator should describe the NPC's guarded response.",
         )
 
-    # Simple exploration/search resolution
     if any(keyword in action for keyword in ["search", "inspect", "investigate", "look", "examine"]):
         return RulesAgentOutput(
             resolution_type="skill_check",
@@ -119,17 +104,11 @@ def resolve_action_deterministic(agent_input: RulesAgentInput) -> Optional[Rules
             suggested_next_step="The narrator should reveal the discovery in story form.",
         )
 
-    # Let the LLM handle anything more complicated.
     return None
 
 
 def resolve_action(player_action: str, state: dict) -> dict:
-    """
-    Compatibility wrapper for the standalone rules_agent_module tests.
-
-    Converts the older rules_agent_module interface into the main project's
-    RulesAgentInput / RulesAgentOutput structure.
-    """
+    """Compatibility shim for the standalone rules_agent_module test suite."""
     agent_input = RulesAgentInput(
         player_action=player_action,
         current_scene=state.get("current_scene", "No scene provided."),
@@ -164,7 +143,6 @@ def resolve_action(player_action: str, state: dict) -> dict:
         "proposed_state_changes": result.proposed_state_changes,
     }
 
-    # Match the older standalone module's expected action names.
     if any(keyword in action for keyword in ["persuade", "convince", "negotiate", "ask", "talk"]):
         action_type = "dialogue"
     elif any(keyword in action for keyword in ["search", "inspect", "investigate", "look", "examine"]):
@@ -172,7 +150,6 @@ def resolve_action(player_action: str, state: dict) -> dict:
     else:
         action_type = result.resolution_type
 
-    # Match the older standalone module's expected combat consequence.
     if action_type == "combat":
         enemy_hp = state.get("enemy_hp", 20)
         consequence["new_enemy_hp"] = max(enemy_hp - result.damage_dealt, 0)
