@@ -800,7 +800,8 @@
         <div class="connection-banner" id="connection-banner">
             Could not reach the backend. Start the server with
             <code>uvicorn src.api:app --reload --port 8000</code>
-            from the project root, then reload this page.
+            from the project root, then
+            <button onclick="loadInitial()" style="margin-left:8px;padding:3px 10px;background:var(--gold);color:var(--dark);border:none;cursor:pointer;font-family:inherit;font-size:13px;">Retry</button>
         </div>
 
         <div class="main">
@@ -855,10 +856,10 @@
                             <div class="agent-name">Rules</div>
                             <div class="agent-status">idle</div>
                         </li>
-                        <li class="agent-row not-implemented" data-agent="critic">
+                        <li class="agent-row" data-agent="critic">
                             <div class="agent-rune">C</div>
                             <div class="agent-name">Critic</div>
-                            <div class="agent-status">not built</div>
+                            <div class="agent-status">idle</div>
                         </li>
                         <li class="agent-row" data-agent="state">
                             <div class="agent-rune">S</div>
@@ -1115,7 +1116,6 @@
                 $routeBadge.style.display = "inline-block";
             }
             for (const entry of activity) {
-                if (["critic"].includes(entry.name)) continue;
                 if (entry.name === "error") continue;
                 setAgentState(entry.name, "active", agentStatusLabels[entry.name] || "running");
                 await sleep(400);
@@ -1217,15 +1217,23 @@
             $connLabel.textContent = "CONNECTED"; $connLabel.style.color = "var(--emerald)";
         }
 
-        async function loadInitial() {
-            try {
-                const res = await fetch(`${API}/state`);
-                if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                const snap = await res.json();
-                renderSceneSnapshot(snap);
-                showConnected();
-            } catch (e) {
-                showConnectionError(e.message);
+        async function loadInitial(retries = 3, delayMs = 1500) {
+            for (let attempt = 1; attempt <= retries; attempt++) {
+                try {
+                    const res = await fetch(`${API}/state`);
+                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                    const snap = await res.json();
+                    renderSceneSnapshot(snap);
+                    showConnected();
+                    return;
+                } catch (e) {
+                    if (attempt < retries) {
+                        $connLabel.textContent = `CONNECTING… (${attempt}/${retries})`;
+                        await sleep(delayMs);
+                    } else {
+                        showConnectionError(e.message);
+                    }
+                }
             }
         }
 
