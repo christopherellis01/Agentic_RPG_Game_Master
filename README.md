@@ -139,7 +139,7 @@ python -m ipykernel install --user --name=agentic_rpg_venv --display-name "Pytho
 
 The easiest development entry point is the notebook prototype:
 
-```bash
+```
 jupyter lab
 ```
 
@@ -187,7 +187,7 @@ The project has moved beyond the initial scaffolding phase. Current implemented 
 
 Current test status:
 
-```bash
+```
 python -m pytest
 ```
 
@@ -206,7 +206,7 @@ The demo API now includes a structured State Updater that applies approved state
 
 Combat turns now follow this flow:
 
-```text
+```
 Player action
 → Router selects combat
 → Rules Agent resolves the attack
