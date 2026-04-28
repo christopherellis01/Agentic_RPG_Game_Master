@@ -213,7 +213,7 @@ Player action
 → State Updater applies combatant HP changes
 → Narrator produces a player-facing response
 → Updated state persists across turns
-
+```
 For example, if the Rules Agent resolves an attack that deals 10 damage, the State Updater changes the Goblin’s HP from 15 to 5, and the next turn starts from that updated HP instead of resetting to 15.
 
 This behavior is covered by an API test in:
