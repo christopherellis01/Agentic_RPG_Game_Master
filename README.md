@@ -139,7 +139,7 @@ python -m ipykernel install --user --name=agentic_rpg_venv --display-name "Pytho
 
 The easiest development entry point is the notebook prototype:
 
-```bash
+```
 jupyter lab
 ```
 
@@ -187,7 +187,7 @@ The project has moved beyond the initial scaffolding phase. Current implemented 
 
 Current test status:
 
-```bash
+```
 python -m pytest
 ```
 
@@ -206,14 +206,14 @@ The demo API now includes a structured State Updater that applies approved state
 
 Combat turns now follow this flow:
 
-```text
+```
 Player action
 → Router selects combat
 → Rules Agent resolves the attack
 → State Updater applies combatant HP changes
 → Narrator produces a player-facing response
 → Updated state persists across turns
-
+```
 For example, if the Rules Agent resolves an attack that deals 10 damage, the State Updater changes the Goblin’s HP from 15 to 5, and the next turn starts from that updated HP instead of resetting to 15.
 
 This behavior is covered by an API test in:
