@@ -209,7 +209,7 @@ The roll value is shown inline in the dialogue feed (`[Roll: 7/10]`) and in the 
 
 ## Team
 
-Mazin Bashir  
+Mazin Bashier  
 Christopher Ellis  
 Agnes Sithole
 
