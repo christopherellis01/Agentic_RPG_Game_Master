@@ -73,8 +73,11 @@ app.add_middleware(
 )
 
 _state: Optional[GameState] = None
-# Browser frontend hard-aborts at 30 s; leave a small buffer.
+# Specialist agents: long timeout so live LLM calls complete.
 AGENT_TIMEOUT_SECONDS = 25
+# Critic runs after specialist agents; keep it short so the total turn
+# stays within the browser's 60-second abort window.
+CRITIC_TIMEOUT_SECONDS = 8
 
 
 def _get_state() -> GameState:
@@ -164,9 +167,10 @@ def _public_snapshot(state: GameState) -> Dict[str, Any]:
     }
 
 
-async def _run_agent_with_fallback(coro, fallback):
+async def _run_agent_with_fallback(coro, fallback, timeout: Optional[float] = None):
+    t = timeout if timeout is not None else AGENT_TIMEOUT_SECONDS
     try:
-        return await asyncio.wait_for(coro, timeout=AGENT_TIMEOUT_SECONDS), False
+        return await asyncio.wait_for(coro, timeout=t), False
     except Exception:
         return fallback, True
 
@@ -575,6 +579,7 @@ async def run_turn(req: TurnRequest) -> Dict[str, Any]:
     critic_output, critic_used_fallback = await _run_agent_with_fallback(
         run_critic_agent(critic_input),
         fallback_critic_output(),
+        timeout=CRITIC_TIMEOUT_SECONDS,
     )
     critic_payload = critic_output.model_dump()
 

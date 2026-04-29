@@ -1135,7 +1135,7 @@
             $connLabel.style.color = "var(--gold)";
             appendDialogue({ who: "player", speaker: "You", said: playerAction });
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 30000);
+            const timeoutId = setTimeout(() => controller.abort(), 60000);
             try {
                 const res = await fetch(`${API}/turn`, {
                     method: "POST",
@@ -1159,7 +1159,7 @@
                 showConnected();
             } catch (e) {
                 const message = e.name === "AbortError"
-                    ? "The turn request took longer than 30 seconds. Check the server log for POST /turn and any agent/API errors."
+                    ? "The turn request took longer than 60 seconds. Check the server log for POST /turn and any agent/API errors."
                     : e.message;
                 if (!resolveTurnLocally(playerAction, message)) {
                     showConnectionError(message);
