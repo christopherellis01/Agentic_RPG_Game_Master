@@ -26,6 +26,7 @@ class RulesAgentOutput(BaseModel):
     resolution_type: str
     outcome: str
     mechanical_summary: str
+    dice_roll: int = 0
     damage_dealt: int = 0
     damage_taken: int = 0
     status_effects: List[str] = Field(default_factory=list)
@@ -49,17 +50,17 @@ def resolve_action_deterministic(agent_input: RulesAgentInput) -> Optional[Rules
         roll = random.randint(1, 10)
 
         if roll >= 8:
-            damage = 10
+            damage = random.randint(6, 10)
             outcome = "success"
-            summary = f"The attack succeeds cleanly. Roll = {roll}."
+            summary = f"Clean hit! You roll a {roll} — the attack connects for {damage} damage."
         elif roll >= 5:
-            damage = 5
+            damage = random.randint(2, 5)
             outcome = "partial_success"
-            summary = f"The attack partially succeeds. Roll = {roll}."
+            summary = f"Glancing blow. You roll a {roll} — the attack grazes for {damage} damage."
         else:
             damage = 0
             outcome = "failure"
-            summary = f"The attack misses or fails to land effectively. Roll = {roll}."
+            summary = f"Miss. You roll a {roll} — the attack fails to connect."
 
         new_enemy_hp = max(enemy_hp - damage, 0)
         proposed_changes = [
@@ -70,6 +71,7 @@ def resolve_action_deterministic(agent_input: RulesAgentInput) -> Optional[Rules
             resolution_type="combat",
             outcome=outcome,
             mechanical_summary=summary,
+            dice_roll=roll,
             damage_dealt=damage,
             damage_taken=0,
             proposed_state_changes=proposed_changes,

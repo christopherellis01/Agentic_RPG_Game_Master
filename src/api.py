@@ -398,7 +398,9 @@ async def run_turn(req: TurnRequest) -> Dict[str, Any]:
     goblin = state.canonical.combatants.get("goblin")
 
     want_npc = bool(req.target_npc_id) or decision.route in ("dialogue", "mixed_action")
-    want_lore = decision.route in ("lore_query", "exploration")
+    # When a specific NPC is targeted the NPC interaction is the primary output;
+    # running lore in parallel would double the sequential wait time unnecessarily.
+    want_lore = decision.route in ("lore_query", "exploration") and not req.target_npc_id
     want_quest = decision.route in ("quest_progression", "mixed_action")
     want_rules = decision.route in ("combat", "mixed_action")
 
@@ -554,10 +556,11 @@ async def run_turn(req: TurnRequest) -> Dict[str, Any]:
                     source_node="rules_agent",
                 ))
 
+            roll_label = f"d10={rules_output.dice_roll}" if rules_output.dice_roll else "RESOLUTION"
             dialogue.append({
                 "who": "narrator",
                 "speaker": "Rules Agent",
-                "tone": "RULES · RESOLUTION",
+                "tone": f"RULES · {roll_label}",
                 "said": rules_output.mechanical_summary,
             })
 
@@ -641,21 +644,23 @@ async def run_turn(req: TurnRequest) -> Dict[str, Any]:
     if rules_payload:
         damage = rules_payload.get("damage_dealt", 0)
         outcome = rules_payload.get("outcome", "unknown")
+        roll = rules_payload.get("dice_roll", 0)
+        roll_tag = f" [Roll: {roll}/10]" if roll else ""
 
         if outcome == "success" and damage > 0:
             narration = (
-                f"You follow through on your action: {req.player_action} "
-                f"The strike lands cleanly, dealing {damage} damage."
+                f"{roll_tag} {req.player_action.rstrip('.')} — "
+                f"the strike lands clean, dealing {damage} damage."
             )
         elif outcome == "partial_success" and damage > 0:
             narration = (
-                f"You attempt: {req.player_action} "
-                f"It partially works, dealing {damage} damage."
+                f"{roll_tag} {req.player_action.rstrip('.')} — "
+                f"a glancing blow connects for {damage} damage."
             )
         elif outcome == "failure":
             narration = (
-                f"You attempt: {req.player_action} "
-                "but it does not succeed this time."
+                f"{roll_tag} {req.player_action.rstrip('.')} — "
+                "the attack fails to connect."
             )
         else:
             narration = rules_payload.get(

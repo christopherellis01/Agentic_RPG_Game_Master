@@ -1210,6 +1210,12 @@
         function showConnectionError(msg) {
             $banner.style.display = "block";
             $connLabel.textContent = "OFFLINE"; $connLabel.style.color = "var(--wine)";
+            const isServerDown = !msg || /fetch|network|Failed to fetch|ERR_CONNECTION/i.test(msg);
+            if (isServerDown) {
+                $banner.innerHTML = `Could not reach the backend. Start the server with <code>uvicorn src.api:app --reload --port 8000</code> from the project root, then <button onclick="loadInitial()" style="margin-left:8px;padding:3px 10px;background:var(--gold);color:var(--dark);border:none;cursor:pointer;font-family:inherit;font-size:13px;">Retry</button>`;
+            } else {
+                $banner.innerHTML = `Turn error — <code>${escapeHtml(msg)}</code> &nbsp;<button onclick="$('connection-banner').style.display='none';showConnected()" style="padding:3px 10px;background:var(--gold);color:var(--dark);border:none;cursor:pointer;font-family:inherit;font-size:13px;">Dismiss</button>`;
+            }
             console.error(msg);
         }
         function showConnected() {

@@ -25,7 +25,8 @@ class RouteDecision(BaseModel):
 
 DIALOGUE_KEYWORDS = {
     "ask", "say", "tell", "speak", "talk", "persuade", "convince",
-    "threaten", "greet", "question", "reply", "negotiate"
+    "threaten", "greet", "question", "reply", "negotiate",
+    "approach", "sit", "join", "wave", "nod",
 }
 
 EXPLORATION_KEYWORDS = {
